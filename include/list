@@ -301,8 +301,8 @@ public:
     typedef bidirectional_iterator_tag       iterator_category;
     typedef _Tp                              value_type;
     typedef value_type&                      reference;
-    typedef typename __rebind_pointer<_VoidPtr, value_type>::type pointer;
-    typedef typename pointer_traits<pointer>::difference_type difference_type;
+    typedef value_type*                      pointer;
+    typedef ptrdiff_t                        difference_type;
 
     _LIBCPP_INLINE_VISIBILITY
     __list_iterator() _NOEXCEPT : __ptr_(nullptr)
@@ -356,7 +356,7 @@ public:
         _LIBCPP_ASSERT(__get_const_db()->__dereferenceable(this),
                        "Attempted to dereference a non-dereferenceable list::iterator");
 #endif
-        return pointer_traits<pointer>::pointer_to(__ptr_->__as_node()->__value_);
+        return _VSTD::addressof(__ptr_->__as_node()->__value_);
     }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -421,8 +421,8 @@ public:
     typedef bidirectional_iterator_tag       iterator_category;
     typedef _Tp                              value_type;
     typedef const value_type&                reference;
-    typedef typename __rebind_pointer<_VoidPtr, const value_type>::type pointer;
-    typedef typename pointer_traits<pointer>::difference_type difference_type;
+    typedef const value_type*                pointer;
+    typedef ptrdiff_t                        difference_type;
 
     _LIBCPP_INLINE_VISIBILITY
     __list_const_iterator() _NOEXCEPT : __ptr_(nullptr)
@@ -483,7 +483,7 @@ public:
         _LIBCPP_ASSERT(__get_const_db()->__dereferenceable(this),
                        "Attempted to dereference a non-dereferenceable list::iterator");
 #endif
-        return pointer_traits<pointer>::pointer_to(__ptr_->__as_node()->__value_);
+        return _VSTD::addressof(__ptr_->__as_node()->__value_);
     }
 
     _LIBCPP_INLINE_VISIBILITY
