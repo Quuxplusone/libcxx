@@ -728,7 +728,7 @@ __list_imp<_Tp, _Alloc>::clear() _NOEXCEPT
         __sz() = 0;
         while (__f != __l)
         {
-            __node_pointer __np = __f->__as_node();
+            __node_pointer __np = static_cast<__node_pointer>(__f);
             __f = __f->__next_;
             __node_alloc_traits::destroy(__na, _VSTD::addressof(__np->__value_));
             __node_alloc_traits::deallocate(__na, __np, 1);
@@ -1449,7 +1449,7 @@ list<_Tp, _Alloc>::insert(const_iterator __p, size_type __n, const value_type& _
             {
                 __node_alloc_traits::destroy(__na, _VSTD::addressof(*__e));
                 __link_pointer __prev = __e.__ptr_->__prev_;
-                __node_alloc_traits::deallocate(__na, __e.__ptr_->__as_node(), 1);
+                __node_alloc_traits::deallocate(__na, static_cast<__node_pointer>(__e.__ptr_), 1);
                 if (__prev == 0)
                     break;
 #if _LIBCPP_DEBUG_LEVEL >= 2
@@ -1517,7 +1517,7 @@ list<_Tp, _Alloc>::insert(const_iterator __p, _InpIter __f, _InpIter __l,
             {
                 __node_alloc_traits::destroy(__na, _VSTD::addressof(*__e));
                 __link_pointer __prev = __e.__ptr_->__prev_;
-                __node_alloc_traits::deallocate(__na, __e.__ptr_->__as_node(), 1);
+                __node_alloc_traits::deallocate(__na, static_cast<__node_pointer>(__e.__ptr_), 1);
                 if (__prev == 0)
                     break;
 #if _LIBCPP_DEBUG_LEVEL >= 2
@@ -1712,7 +1712,7 @@ list<_Tp, _Alloc>::pop_front()
     }
     __get_db()->unlock();
 #endif
-    __node_pointer __np = __n->__as_node();
+    __node_pointer __np = static_cast<__node_pointer>(__n);
     __node_alloc_traits::destroy(__na, _VSTD::addressof(__np->__value_));
     __node_alloc_traits::deallocate(__na, __np, 1);
 }
@@ -1741,7 +1741,7 @@ list<_Tp, _Alloc>::pop_back()
     }
     __get_db()->unlock();
 #endif
-    __node_pointer __np = __n->__as_node();
+    __node_pointer __np = static_cast<__node_pointer>(__n);
     __node_alloc_traits::destroy(__na, _VSTD::addressof(__np->__value_));
     __node_alloc_traits::deallocate(__na, __np, 1);
 }
@@ -1777,7 +1777,7 @@ list<_Tp, _Alloc>::erase(const_iterator __p)
     }
     __get_db()->unlock();
 #endif
-    __node_pointer __np = __n->__as_node();
+    __node_pointer __np = static_cast<__node_pointer>(__n);
     __node_alloc_traits::destroy(__na, _VSTD::addressof(__np->__value_));
     __node_alloc_traits::deallocate(__na, __np, 1);
 #if _LIBCPP_DEBUG_LEVEL >= 2
@@ -1823,7 +1823,7 @@ list<_Tp, _Alloc>::erase(const_iterator __f, const_iterator __l)
             }
             __get_db()->unlock();
 #endif
-            __node_pointer __np = __n->__as_node();
+            __node_pointer __np = static_cast<__node_pointer>(__n);
             __node_alloc_traits::destroy(__na, _VSTD::addressof(__np->__value_));
             __node_alloc_traits::deallocate(__na, __np, 1);
         }
@@ -1877,7 +1877,7 @@ list<_Tp, _Alloc>::resize(size_type __n)
             {
                 __node_alloc_traits::destroy(__na, _VSTD::addressof(*__e));
                 __link_pointer __prev = __e.__ptr_->__prev_;
-                __node_alloc_traits::deallocate(__na, __e.__ptr_->__as_node(), 1);
+                __node_alloc_traits::deallocate(__na, static_cast<__node_pointer>(__e.__ptr_), 1);
                 if (__prev == 0)
                     break;
 #if _LIBCPP_DEBUG_LEVEL >= 2
@@ -1937,7 +1937,7 @@ list<_Tp, _Alloc>::resize(size_type __n, const value_type& __x)
             {
                 __node_alloc_traits::destroy(__na, _VSTD::addressof(*__e));
                 __link_pointer __prev = __e.__ptr_->__prev_;
-                __node_alloc_traits::deallocate(__na, __e.__ptr_->__as_node(), 1);
+                __node_alloc_traits::deallocate(__na, static_cast<__node_pointer>(__e.__ptr_), 1);
                 if (__prev == 0)
                     break;
 #if _LIBCPP_DEBUG_LEVEL >= 2
