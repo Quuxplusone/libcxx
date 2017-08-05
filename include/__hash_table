@@ -1858,18 +1858,18 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_unique(__node_pointer __
         {
             __pn =__p1_.first().__ptr();
             __nd->__next_ = __pn->__next_;
-            __pn->__next_ = __nd->__ptr();
+            __pn->__next_ = static_cast<__next_pointer>(__nd);
             // fix up __bucket_list_
             __bucket_list_[__chash] = __pn;
             if (__nd->__next_ != nullptr)
-                __bucket_list_[__constrain_hash(__nd->__next_->__hash(), __bc)] = __nd->__ptr();
+                __bucket_list_[__constrain_hash(__nd->__next_->__hash(), __bc)] = static_cast<__next_pointer>(__nd);
         }
         else
         {
             __nd->__next_ = __pn->__next_;
-            __pn->__next_ = __nd->__ptr();
+            __pn->__next_ = static_cast<__next_pointer>(__nd);
         }
-        __ndptr = __nd->__ptr();
+        __ndptr = static_cast<__next_pointer>(__nd);
         // increment size
         ++size();
         __inserted = true;
@@ -1900,12 +1900,12 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi(__node_pointer __c
     {
         __pn =__p1_.first().__ptr();
         __cp->__next_ = __pn->__next_;
-        __pn->__next_ = __cp->__ptr();
+        __pn->__next_ = static_cast<__next_pointer>(__cp);
         // fix up __bucket_list_
         __bucket_list_[__chash] = __pn;
         if (__cp->__next_ != nullptr)
             __bucket_list_[__constrain_hash(__cp->__next_->__hash(), __bc)]
-                = __cp->__ptr();
+                = static_cast<__next_pointer>(__cp);
     }
     else
     {
@@ -1928,19 +1928,19 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi(__node_pointer __c
             }
         }
         __cp->__next_ = __pn->__next_;
-        __pn->__next_ = __cp->__ptr();
+        __pn->__next_ = static_cast<__next_pointer>(__cp);
         if (__cp->__next_ != nullptr)
         {
             size_t __nhash = __constrain_hash(__cp->__next_->__hash(), __bc);
             if (__nhash != __chash)
-                __bucket_list_[__nhash] = __cp->__ptr();
+                __bucket_list_[__nhash] = static_cast<__next_pointer>(__cp);
         }
     }
     ++size();
 #if _LIBCPP_DEBUG_LEVEL >= 2
-    return iterator(__cp->__ptr(), this);
+    return iterator(static_cast<__next_pointer>(__cp), this);
 #else
-    return iterator(__cp->__ptr());
+    return iterator(static_cast<__next_pointer>(__cp));
 #endif
 }
 
@@ -2035,12 +2035,12 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__emplace_unique_key_args(_Key const& 
         {
             __pn = __p1_.first().__ptr();
             __h->__next_ = __pn->__next_;
-            __pn->__next_ = __h.get()->__ptr();
+            __pn->__next_ = static_cast<__next_pointer>(__h.get());
             // fix up __bucket_list_
             __bucket_list_[__chash] = __pn;
             if (__h->__next_ != nullptr)
                 __bucket_list_[__constrain_hash(__h->__next_->__hash(), __bc)]
-                    = __h.get()->__ptr();
+                    = static_cast<__next_pointer>(__h.get());
         }
         else
         {
