@@ -56,7 +56,11 @@ struct fancy_ptr_base {
 #endif
 
 protected:
-    T *m_ptr = nullptr;
+    T *m_ptr
+#ifndef AJO_TRIVIALLY_CTABLE_FANCY
+             = nullptr
+#endif
+                      ;
 private:
     constexpr CRTP& as_crtp() { return *static_cast<CRTP*>(this); }
     constexpr const CRTP& as_crtp() const { return *static_cast<const CRTP*>(this); }
@@ -84,16 +88,20 @@ protected:
 
 template<class T>
 class test_fancyptr : public fancy_ptr_base<T, test_fancyptr<T>> {
-    size_t m_payload = 0;
+    size_t m_payload
+#ifndef AJO_TRIVIALLY_CTABLE_FANCY
+                     = 0
+#endif
+                        ;
 public:
-    test_fancyptr() = default;
-    test_fancyptr(decltype(nullptr)) {}
+    test_fancyptr() noexcept = default;
+    test_fancyptr(decltype(nullptr)) noexcept { this->m_ptr = nullptr; }
 
     template<
         class U,
         typename std::enable_if<std::is_convertible<U*, T*>::value, bool>::type = true
     >
-    test_fancyptr(const test_fancyptr<U>& rhs) :
+    test_fancyptr(const test_fancyptr<U>& rhs) noexcept :
         test_fancyptr(rhs.ptr(), rhs.payload()) {}
 
     template<
@@ -101,10 +109,10 @@ public:
         typename std::enable_if<!std::is_convertible<U*, T*>::value, bool>::type = true,
         decltype(static_cast<T *>(std::declval<U *>())) = nullptr
     >
-    explicit test_fancyptr(const test_fancyptr<U>& rhs) :
+    explicit test_fancyptr(const test_fancyptr<U>& rhs) noexcept :
         test_fancyptr(static_cast<T *>(rhs.ptr()), rhs.payload()) {}
 
-    explicit test_fancyptr(T *p, size_t n) : m_payload(n) { this->m_ptr = p; }
+    explicit test_fancyptr(T *p, size_t n) noexcept : m_payload(n) { this->m_ptr = p; }
 
     size_t payload() const { return m_payload; }
 
