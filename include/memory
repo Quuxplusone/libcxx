@@ -1509,6 +1509,40 @@ struct __alloc_traits_difference_type<_Alloc, _Ptr, true>
     typedef typename _Alloc::difference_type type;
 };
 
+template <class _Alloc, class _Tp, class = void>
+struct __has_has_trivial_construct_and_destroy : false_type {};
+
+template <class _Alloc, class _Tp>
+struct __has_has_trivial_construct_and_destroy<_Alloc, _Tp,
+           typename __void_t<typename _Alloc::template has_trivial_construct_and_destroy<_Tp>>::type>
+               : true_type {};
+
+template <class _Alloc, class _Tp, bool = __has_has_trivial_construct_and_destroy<_Alloc, _Tp>::value>
+struct __has_trivial_construct_and_destroy
+    : integral_constant<bool, _Alloc::template has_trivial_construct_and_destroy<_Tp>::value> {};
+
+template <class _Alloc, class _Tp>
+struct __has_trivial_construct_and_destroy<_Alloc, _Tp, false>
+    : integral_constant<bool,
+        !__has_construct<_Alloc, _Tp*, _Tp&&>::value && !__has_destroy<_Alloc, _Tp*>::value> {};
+
+template <class _Tp>
+struct __has_trivial_construct_and_destroy<allocator<_Tp>, _Tp, false>
+               : true_type {};
+
+template <class _Alloc, class _Tp>
+struct __has_trivial_move_construct : integral_constant<bool,
+        __has_trivial_construct_and_destroy<_Alloc, _Tp>::value ||
+        !__has_construct<_Alloc, _Tp*, _Tp&&>::value
+    > {};
+
+template <class _Alloc, class _Tp>
+struct __has_trivial_destroy : integral_constant<bool,
+        __has_trivial_construct_and_destroy<_Alloc, _Tp>::value ||
+        !__has_destroy<_Alloc, _Tp*>::value
+    > {};
+
+
 template <class _Alloc>
 struct _LIBCPP_TEMPLATE_VIS allocator_traits
 {
@@ -1531,6 +1565,10 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
                      propagate_on_container_swap;
     typedef typename __is_always_equal<allocator_type>::type
                      is_always_equal;
+
+    template<class _Tp>
+    using has_trivial_construct_and_destroy =
+        typename __has_trivial_construct_and_destroy<allocator_type, _Tp>::type;
 
 #ifndef _LIBCPP_CXX03_LANG
     template <class _Tp> using rebind_alloc =
@@ -1671,7 +1709,7 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
         _LIBCPP_INLINE_VISIBILITY
         static
         void
-        __construct_backward(allocator_type& __a, _Ptr __begin1, _Ptr __end1, _Ptr& __end2)
+        __construct_backward(allocator_type& __a, _Ptr __begin1, _Ptr __end1, _Ptr& __end2, false_type)
         {
             while (__end1 != __begin1)
             {
@@ -1683,14 +1721,8 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
     template <class _Tp>
         _LIBCPP_INLINE_VISIBILITY
         static
-        typename enable_if
-        <
-            (is_same<allocator_type, allocator<_Tp> >::value
-                || !__has_construct<allocator_type, _Tp*, _Tp>::value) &&
-             is_trivially_move_constructible<_Tp>::value,
-            void
-        >::type
-        __construct_backward(allocator_type&, _Tp* __begin1, _Tp* __end1, _Tp*& __end2)
+        void
+        __construct_backward(allocator_type&, _Tp* __begin1, _Tp* __end1, _Tp*& __end2, true_type)
         {
             ptrdiff_t _Np = __end1 - __begin1;
             __end2 -= _Np;

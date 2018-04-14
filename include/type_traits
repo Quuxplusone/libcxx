@@ -3694,6 +3694,34 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_trivially_destructible_v
     = is_trivially_destructible<_Tp>::value;
 #endif
 
+// is_trivially_relocatable
+
+template <class _Tp, class = void> struct __is_trivially_relocatable_check
+#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+    : public integral_constant<bool,
+        is_trivially_move_constructible<_Tp>::value && is_trivially_destructible<_Tp>::value
+      >
+#else
+    : public integral_constant<bool,
+        is_trivially_copy_constructible<_Tp>::value && is_trivially_destructible<_Tp>::value
+      >
+#endif
+    {};
+
+template <class _Tp> struct __is_trivially_relocatable_check<_Tp, decltype(void(bool(_Tp::is_trivially_relocatable::value)))>
+    : integral_constant<bool, _Tp::is_trivially_relocatable::value>
+    {};
+
+template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_trivially_relocatable
+    : public __is_trivially_relocatable_check<_Tp, void>
+    {};
+
+#if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
+template <class _Tp>
+_LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_trivially_relocatable_v
+    = is_trivially_relocatable<_Tp>::value;
+#endif
+
 // is_nothrow_constructible
 
 #if 0
