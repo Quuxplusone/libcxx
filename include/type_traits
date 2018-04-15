@@ -4775,6 +4775,33 @@ _LIBCPP_INLINE_VAR constexpr bool is_nothrow_swappable_v
 
 #endif // _LIBCPP_STD_VER > 14
 
+
+// is_trivially_comparable
+
+template <class _Tp, class = void>
+struct __has_is_trivially_comparable : false_type {};
+
+template <class _Tp>
+struct __has_is_trivially_comparable<_Tp, typename __void_t<typename _Tp::is_trivially_comparable>::type>
+    : true_type {};
+
+template <class _Tp, bool = __has_is_trivially_comparable<_Tp>::value>
+struct __is_trivially_comparable
+    : integral_constant<bool, _Tp::is_trivially_comparable::value> {};
+
+template <class _Tp>
+struct __is_trivially_comparable<_Tp, false>
+    : integral_constant<bool,
+        is_integral<_Tp>::value || is_pointer<_Tp>::value> {};
+
+template <class _Tp>
+struct is_trivially_comparable : __is_trivially_comparable<_Tp>::type {};
+
+template <class _Tp>
+_LIBCPP_INLINE_VAR constexpr bool is_trivially_comparable_v
+    = is_trivially_comparable<_Tp>::value;
+
+
 #ifdef _LIBCPP_UNDERLYING_TYPE
 
 template <class _Tp>

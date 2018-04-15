@@ -1318,15 +1318,54 @@ mismatch(_InputIterator1 __first1, _InputIterator1 __last1,
 
 // equal
 
+template <class _Tp, class _Compare>
+struct __is_simple_equality : false_type {};
+
+template <class _Tp>
+struct __is_simple_equality<_Tp, _VSTD::equal_to<_Tp>> : true_type {};
+
+template <class _Tp>
+struct __is_simple_equality<_Tp, __equal_to<_Tp, _Tp>> : true_type {};
+
+template <class _Tp>
+struct __is_simple_equality<_Tp, _VSTD::equal_to<void>> : true_type {};
+
 template <class _InputIterator1, class _InputIterator2, class _BinaryPredicate>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 bool
-equal(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2, _BinaryPredicate __pred)
+__equal(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2, _BinaryPredicate, true_type)
+{
+    auto __length = _VSTD::distance(__first1, __last1);
+    return __builtin_memcmp(_VSTD::addressof(*__first1), _VSTD::addressof(*__last1), __length) == 0;
+}
+
+template <class _InputIterator1, class _InputIterator2, class _BinaryPredicate>
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+bool
+__equal(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2, _BinaryPredicate __pred, false_type)
 {
     for (; __first1 != __last1; ++__first1, (void) ++__first2)
         if (!__pred(*__first1, *__first2))
             return false;
     return true;
+}
+
+template <class _InputIterator1, class _InputIterator2, class _BinaryPredicate>
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+bool
+equal(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2, _BinaryPredicate __pred)
+{
+    using _Tp = typename iterator_traits<_InputIterator1>::value_type;
+    using _Up = typename iterator_traits<_InputIterator2>::value_type;
+    using __compare_via_memcmp = integral_constant<bool,
+        __is_contiguous_iterator<_InputIterator1>::value &&
+        __is_contiguous_iterator<_InputIterator2>::value &&
+        is_same<typename remove_const<_Tp>::type, typename remove_const<_Up>::type>::value &&
+        is_trivially_comparable<_Tp>::value &&
+        __is_simple_equality<_Tp, typename __uncvref<_BinaryPredicate>::type>::value
+    >;
+
+    return __equal(__first1, __last1, __first2, __pred, __compare_via_memcmp{});
 }
 
 template <class _InputIterator1, class _InputIterator2>
@@ -5666,10 +5705,22 @@ set_symmetric_difference(_InputIterator1 __first1, _InputIterator1 __last1,
 
 // lexicographical_compare
 
+template <class _Tp, class _Compare>
+struct __is_simple_less : false_type {};
+
+template <class _Tp>
+struct __is_simple_less<_Tp, _VSTD::less<_Tp>> : true_type {};
+
+template <class _Tp>
+struct __is_simple_less<_Tp, __less<_Tp, _Tp>> : true_type {};
+
+template <class _Tp>
+struct __is_simple_less<_Tp, _VSTD::less<void>> : true_type {};
+
 template <class _Compare, class _InputIterator1, class _InputIterator2>
 _LIBCPP_CONSTEXPR_AFTER_CXX17 bool
 __lexicographical_compare(_InputIterator1 __first1, _InputIterator1 __last1,
-                          _InputIterator2 __first2, _InputIterator2 __last2, _Compare __comp)
+                          _InputIterator2 __first2, _InputIterator2 __last2, _Compare __comp, false_type)
 {
     for (; __first2 != __last2; ++__first1, (void) ++__first2)
     {
@@ -5679,6 +5730,36 @@ __lexicographical_compare(_InputIterator1 __first1, _InputIterator1 __last1,
             return false;
     }
     return false;
+}
+
+template <class _Compare, class _InputIterator1, class _InputIterator2>
+_LIBCPP_CONSTEXPR_AFTER_CXX17 bool
+__lexicographical_compare(_InputIterator1 __first1, _InputIterator1 __last1,
+                          _InputIterator2 __first2, _InputIterator2 __last2, _Compare, true_type)
+{
+    auto __length1 = _VSTD::distance(__first1, __last1);
+    auto __length2 = _VSTD::distance(__first2, __last2);
+    auto __minlength = (__length1 < __length2) ? __length1 : __length2;
+
+    int __r = __builtin_memcmp(_VSTD::addressof(*__first1), _VSTD::addressof(*__first2), __minlength);
+    return (__r != 0) ? (__r < 0) : (__length1 < __length2);
+}
+
+template <class _Compare, class _InputIterator1, class _InputIterator2>
+_LIBCPP_CONSTEXPR_AFTER_CXX17 bool
+__lexicographical_compare(_InputIterator1 __first1, _InputIterator1 __last1,
+                          _InputIterator2 __first2, _InputIterator2 __last2, _Compare __comp)
+{
+    using _Tp = typename iterator_traits<_InputIterator1>::value_type;
+    using _Up = typename iterator_traits<_InputIterator2>::value_type;
+    using __compare_via_memcmp = integral_constant<bool,
+        __is_contiguous_iterator<_InputIterator1>::value &&
+        __is_contiguous_iterator<_InputIterator2>::value &&
+        is_same<typename __uncvref<_Tp>::type, typename __uncvref<_Up>::type>::value &&
+        is_trivially_comparable<_Tp>::value &&
+        __is_simple_less<_Tp, typename __uncvref<_Compare>::type>::value
+    >;
+    return __lexicographical_compare<_Compare>(__first1, __last1, __first2, __last2, __comp, __compare_via_memcmp());
 }
 
 template <class _InputIterator1, class _InputIterator2, class _Compare>
