@@ -197,6 +197,48 @@ struct nullopt_t
 
 _LIBCPP_INLINE_VAR constexpr nullopt_t nullopt{nullopt_t::__secret_tag{}, nullopt_t::__secret_tag{}};
 
+template<class _Tp>
+struct tombstone_traits {
+    static constexpr size_t spare_representations = 0;
+    static constexpr size_t index(const _Tp *) { return size_t(-1); }
+    static constexpr void set_spare_representation(_Tp *, size_t) = delete;
+};
+
+template<>
+struct tombstone_traits<bool> {
+    static constexpr size_t spare_representations = 254;
+    static size_t index(const bool *p) {
+        unsigned char ch = *(const unsigned char *)p;
+        return (ch >= 2) ? (ch - 2) : size_t(-1);
+    }
+    static void set_spare_representation(bool *p, size_t i) {
+        *(unsigned char *)p = (i + 2);
+    }
+};
+
+template<class> class optional;
+
+template<class _Tp>
+struct tombstone_traits<optional<_Tp>> {
+    using _Opt = optional<_Tp>;
+
+    static constexpr size_t spare_representations = _Opt::__spare_representations;
+    static size_t index(const _Opt *p) { return _Opt::__index(p); }
+    static void set_spare_representation(_Opt *p, size_t i) { _Opt::__set_spare_representation(p, i); }
+};
+
+template<class _Tp>
+struct tombstone_traits<optional<_Tp&>> {
+    using _Opt = optional<_Tp&>;
+
+    static constexpr size_t spare_representations = 0;
+    static size_t index(const _Opt *) { return size_t(-1); }
+    static void set_spare_representation(_Opt *, size_t) = delete;
+};
+
+template <class _Tp, bool = /*is_literal_type<_Tp>::value &&*/ tombstone_traits<_Tp>::spare_representations >= 1>
+struct __optional_tombstone_base;
+
 template <class _Tp, bool = is_trivially_destructible<_Tp>::value>
 struct __optional_destruct_base;
 
@@ -211,33 +253,32 @@ struct __optional_destruct_base<_Tp, false>
         char __null_state_;
         value_type __val_;
     };
-    bool __engaged_;
 
     _LIBCPP_INLINE_VISIBILITY
     ~__optional_destruct_base()
     {
-        if (__engaged_)
+        auto *__self = static_cast<__optional_tombstone_base<_Tp> *>(this);
+        if (__self->__engaged())
             __val_.~value_type();
     }
 
     _LIBCPP_INLINE_VISIBILITY
     constexpr __optional_destruct_base() noexcept
-        :  __null_state_(),
-           __engaged_(false) {}
+        :  __null_state_() {}
 
     template <class... _Args>
     _LIBCPP_INLINE_VISIBILITY
     constexpr explicit __optional_destruct_base(in_place_t, _Args&&... __args)
-        :  __val_(_VSTD::forward<_Args>(__args)...),
-           __engaged_(true) {}
+        :  __val_(_VSTD::forward<_Args>(__args)...) {}
 
     _LIBCPP_INLINE_VISIBILITY
     void reset() noexcept
     {
-        if (__engaged_)
+        auto *__self = static_cast<__optional_tombstone_base<_Tp> *>(this);
+        if (__self->__engaged())
         {
             __val_.~value_type();
-            __engaged_ = false;
+            __self->__disengage();
         }
     }
 };
@@ -253,40 +294,123 @@ struct __optional_destruct_base<_Tp, true>
         char __null_state_;
         value_type __val_;
     };
-    bool __engaged_;
 
     _LIBCPP_INLINE_VISIBILITY
     constexpr __optional_destruct_base() noexcept
-        :  __null_state_(),
-           __engaged_(false) {}
+        :  __null_state_() {}
 
     template <class... _Args>
     _LIBCPP_INLINE_VISIBILITY
     constexpr explicit __optional_destruct_base(in_place_t, _Args&&... __args)
-        :  __val_(_VSTD::forward<_Args>(__args)...),
-           __engaged_(true) {}
+        :  __val_(_VSTD::forward<_Args>(__args)...) {}
 
     _LIBCPP_INLINE_VISIBILITY
     void reset() noexcept
     {
-        if (__engaged_)
+        auto *__self = static_cast<__optional_tombstone_base<_Tp> *>(this);
+        if (__self->__engaged())
         {
-            __engaged_ = false;
+            __self->__disengage();
         }
     }
 };
 
-template <class _Tp, bool = is_reference<_Tp>::value>
-struct __optional_storage_base : __optional_destruct_base<_Tp>
+template <class _Tp>
+struct __optional_tombstone_base<_Tp, false> : __optional_destruct_base<_Tp>
+{
+    bool __engaged_;
+
+    _LIBCPP_INLINE_VISIBILITY
+    constexpr __optional_tombstone_base() noexcept
+        :  __engaged_(false) {}
+
+    template <class... _Args>
+    _LIBCPP_INLINE_VISIBILITY
+    constexpr explicit __optional_tombstone_base(in_place_t, _Args&&... __args)
+        :  __optional_destruct_base<_Tp>(in_place_t(), _VSTD::forward<_Args>(__args)...),
+           __engaged_(true) {}
+
+    _LIBCPP_INLINE_VISIBILITY
+    constexpr bool __engaged() const noexcept { return __engaged_; }
+
+    _LIBCPP_INLINE_VISIBILITY
+    constexpr void __disengage() noexcept { __engaged_ = false; }
+
+    _LIBCPP_INLINE_VISIBILITY
+    constexpr void __engage() noexcept { __engaged_ = true; }
+
+    static constexpr size_t __spare_representations = 254;
+
+    _LIBCPP_INLINE_VISIBILITY
+    static void __set_spare_representation(__optional_tombstone_base *__p, size_t __i) noexcept
+    {
+        bool *__q = _VSTD::addressof(__p->__engaged_);
+        tombstone_traits<bool>::set_spare_representation(__q, __i);
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    static size_t __index(const __optional_tombstone_base *__p) noexcept
+    {
+        const bool *__q = _VSTD::addressof(__p->__engaged_);
+        return tombstone_traits<bool>::index(__q);
+    }
+};
+
+template <class _Tp>
+struct __optional_tombstone_base<_Tp, true> : __optional_destruct_base<_Tp>
 {
     using __base = __optional_destruct_base<_Tp>;
+    using __base::__base;
+
+    _LIBCPP_INLINE_VISIBILITY
+    constexpr __optional_tombstone_base() noexcept
+    {
+        tombstone_traits<_Tp>::set_spare_representation(_VSTD::addressof(this->__val_), 0);
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    constexpr bool __engaged() const noexcept
+    {
+        return tombstone_traits<_Tp>::index(_VSTD::addressof(this->__val_)) == size_t(-1);
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    constexpr void __disengage() noexcept
+    {
+        tombstone_traits<_Tp>::set_spare_representation(_VSTD::addressof(this->__val_), 0);
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    constexpr void __engage() noexcept {}
+
+    static constexpr size_t __spare_representations = tombstone_traits<_Tp>::spare_representations - 1;
+
+    _LIBCPP_INLINE_VISIBILITY
+    static void __set_spare_representation(__optional_tombstone_base *__p, size_t __i) noexcept
+    {
+        _Tp *__q = _VSTD::addressof(__p->__val_);
+        tombstone_traits<_Tp>::set_spare_representation(__q, __i + 1);
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    static size_t __index(const __optional_tombstone_base *__p) noexcept
+    {
+        const _Tp *__q = _VSTD::addressof(__p->__val_);
+        return tombstone_traits<_Tp>::index(__q) - 1;
+    }
+};
+
+template <class _Tp, bool = is_reference<_Tp>::value>
+struct __optional_storage_base : __optional_tombstone_base<_Tp>
+{
+    using __base = __optional_tombstone_base<_Tp>;
     using value_type = _Tp;
     using __base::__base;
 
     _LIBCPP_INLINE_VISIBILITY
     constexpr bool has_value() const noexcept
     {
-        return this->__engaged_;
+        return this->__engaged();
     }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -316,7 +440,7 @@ struct __optional_storage_base : __optional_destruct_base<_Tp>
     {
         _LIBCPP_ASSERT(!has_value(), "__construct called for engaged __optional_storage");
         ::new((void*)_VSTD::addressof(this->__val_)) value_type(_VSTD::forward<_Args>(__args)...);
-        this->__engaged_ = true;
+        this->__engage();
     }
 
     template <class _That>
@@ -331,14 +455,14 @@ struct __optional_storage_base : __optional_destruct_base<_Tp>
     _LIBCPP_INLINE_VISIBILITY
     void __assign_from(_That&& __opt)
     {
-        if (this->__engaged_ == __opt.has_value())
+        if (this->__engaged() == __opt.has_value())
         {
-            if (this->__engaged_)
+            if (this->__engaged())
                 this->__val_ = _VSTD::forward<_That>(__opt).__get();
         }
         else
         {
-            if (this->__engaged_)
+            if (this->__engaged())
                 this->reset();
             else
                 __construct(_VSTD::forward<_That>(__opt).__get());
@@ -581,6 +705,8 @@ class optional
     , private __optional_sfinae_ctor_base_t<_Tp>
     , private __optional_sfinae_assign_base_t<_Tp>
 {
+    friend struct tombstone_traits<optional>;
+
     using __base = __optional_move_assign_base<_Tp>;
 public:
     using value_type = _Tp;
