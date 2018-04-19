@@ -337,6 +337,10 @@ module std [system] {
     header "memory"
     export *
   }
+  module memory_resource {
+    header "memory_resource"
+    export *
+  }
   module mutex {
     header "mutex"
     export *
