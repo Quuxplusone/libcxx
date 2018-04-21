@@ -56,6 +56,9 @@ namespace pmr {
 #include <__functional_base>
 #include <limits>
 #include <memory>
+#if !defined(_LIBCPP_HAS_NO_THREADS)
+#include <mutex>
+#endif
 #include <new>
 #include <stdexcept>
 #include <tuple>
@@ -327,69 +330,24 @@ struct pool_options {
 
 // 23.12.5.1, mem.res.pool.overview
 
-class _LIBCPP_TYPE_VIS synchronized_pool_resource : public memory_resource
-{
-public:
-    synchronized_pool_resource(const pool_options& opts, memory_resource* upstream);
-
-    _LIBCPP_INLINE_VISIBILITY
-    synchronized_pool_resource()
-        : synchronized_pool_resource(pool_options(), get_default_resource()) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    explicit synchronized_pool_resource(memory_resource* upstream)
-        : synchronized_pool_resource(pool_options(), upstream) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    explicit synchronized_pool_resource(const pool_options& opts)
-        : synchronized_pool_resource(opts, get_default_resource()) {}
-
-    synchronized_pool_resource(const synchronized_pool_resource&) = delete;
-
-    virtual ~synchronized_pool_resource();
-
-    synchronized_pool_resource& operator=(const synchronized_pool_resource&) = delete;
-
-    void release();
-
-    _LIBCPP_INLINE_VISIBILITY
-    memory_resource* upstream_resource() const
-        { return __res_; }
-
-    _LIBCPP_INLINE_VISIBILITY
-    pool_options options() const
-        { return __options_; }
-
-protected:
-    void* do_allocate(size_t __bytes, size_t __align);
-
-    void do_deallocate(void* __p, size_t __bytes, size_t __align);
-
-    _LIBCPP_INLINE_VISIBILITY
-    bool do_is_equal(const memory_resource& __other) const _NOEXCEPT
-        { return this == _VSTD::addressof(__other); }
-
-private:
-    memory_resource *__res_;
-    pool_options __options_;
-};
+struct __pool_resource_chunk;
 
 class _LIBCPP_TYPE_VIS unsynchronized_pool_resource : public memory_resource
 {
 public:
-    unsynchronized_pool_resource(const pool_options& opts, memory_resource* upstream);
+    unsynchronized_pool_resource(const pool_options& __opts, memory_resource* __upstream);
 
     _LIBCPP_INLINE_VISIBILITY
     unsynchronized_pool_resource()
         : unsynchronized_pool_resource(pool_options(), get_default_resource()) {}
 
     _LIBCPP_INLINE_VISIBILITY
-    explicit unsynchronized_pool_resource(memory_resource* upstream)
-        : unsynchronized_pool_resource(pool_options(), upstream) {}
+    explicit unsynchronized_pool_resource(memory_resource* __upstream)
+        : unsynchronized_pool_resource(pool_options(), __upstream) {}
 
     _LIBCPP_INLINE_VISIBILITY
-    explicit unsynchronized_pool_resource(const pool_options& opts)
-        : unsynchronized_pool_resource(opts, get_default_resource()) {}
+    explicit unsynchronized_pool_resource(const pool_options& __opts)
+        : unsynchronized_pool_resource(__opts, get_default_resource()) {}
 
     unsynchronized_pool_resource(const unsynchronized_pool_resource&) = delete;
 
@@ -418,7 +376,73 @@ protected:
 
 private:
     memory_resource *__res_;
+    __pool_resource_chunk *__chunk_;
     pool_options __options_;
+};
+
+class _LIBCPP_TYPE_VIS synchronized_pool_resource : public memory_resource
+{
+public:
+    synchronized_pool_resource(const pool_options& __opts, memory_resource* __upstream)
+        : __unsync_(__opts, __upstream) {}
+
+    _LIBCPP_INLINE_VISIBILITY
+    synchronized_pool_resource()
+        : synchronized_pool_resource(pool_options(), get_default_resource()) {}
+
+    _LIBCPP_INLINE_VISIBILITY
+    explicit synchronized_pool_resource(memory_resource* __upstream)
+        : synchronized_pool_resource(pool_options(), __upstream) {}
+
+    _LIBCPP_INLINE_VISIBILITY
+    explicit synchronized_pool_resource(const pool_options& __opts)
+        : synchronized_pool_resource(__opts, get_default_resource()) {}
+
+    synchronized_pool_resource(const synchronized_pool_resource&) = delete;
+
+    virtual ~synchronized_pool_resource();
+
+    synchronized_pool_resource& operator=(const synchronized_pool_resource&) = delete;
+
+    void release() {
+#if !defined(_LIBCPP_HAS_NO_THREADS)
+        unique_lock<mutex> __lk(__mut_);
+#endif
+        __unsync_.release();
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    memory_resource* upstream_resource() const
+        { return __unsync_.upstream_resource(); }
+
+    _LIBCPP_INLINE_VISIBILITY
+    pool_options options() const
+        { return __unsync_.options(); }
+
+protected:
+    void* do_allocate(size_t __bytes, size_t __align) {
+#if !defined(_LIBCPP_HAS_NO_THREADS)
+        unique_lock<mutex> __lk(__mut_);
+#endif
+        return __unsync_.allocate(__bytes, __align);
+    }
+
+    void do_deallocate(void* __p, size_t __bytes, size_t __align) {
+#if !defined(_LIBCPP_HAS_NO_THREADS)
+        unique_lock<mutex> __lk(__mut_);
+#endif
+        return __unsync_.deallocate(__p, __bytes, __align);
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    bool do_is_equal(const memory_resource& __other) const _NOEXCEPT
+        { return this == _VSTD::addressof(__other); }
+
+private:
+#if !defined(_LIBCPP_HAS_NO_THREADS)
+    mutex __mut_;
+#endif
+    unsynchronized_pool_resource __unsync_;
 };
 
 // 23.12.6, mem.res.monotonic.buffer

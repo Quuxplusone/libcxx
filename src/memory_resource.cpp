@@ -11,7 +11,8 @@
 
 #ifndef _LIBCPP_HAS_NO_ATOMIC_HEADER
 #include "atomic"
-#elif !defined(_LIBCPP_HAS_NO_THREADS)
+#endif
+#if !defined(_LIBCPP_HAS_NO_THREADS)
 #include "mutex"
 #endif
 
@@ -138,6 +139,115 @@ memory_resource * get_default_resource() _NOEXCEPT
 memory_resource * set_default_resource(memory_resource * __new_res) _NOEXCEPT
 {
     return __default_memory_resource(true, __new_res);
+}
+
+// 23.12.5, mem.res.pool
+
+template<class T>
+struct __mr_holder {
+    memory_resource *res;
+    void *ptr;
+    size_t size;
+    size_t align;
+
+    __mr_holder(memory_resource *res, size_t size, size_t align)
+        : res(res), ptr(res->allocate(size, align)), size(size), align(align)
+    {}
+
+    T *release() {
+        T *result = static_cast<T*>(ptr);
+        ptr = nullptr;
+        return result;
+    }
+
+    T *get() const {
+        return static_cast<T*>(ptr);
+    }
+
+    T *operator->() const {
+        return static_cast<T*>(ptr);
+    }
+
+    ~__mr_holder() {
+        if (ptr) {
+            res->deallocate(ptr, size, align);
+        }
+    }
+};
+
+struct __pool_resource_chunk {
+    size_t bytes;
+    size_t alignment;
+    void *allocation;
+    __pool_resource_chunk *next;
+};
+
+// 23.12.5.3, mem.res.pool.ctor
+
+unsynchronized_pool_resource::unsynchronized_pool_resource(const pool_options& opts, memory_resource* upstream)
+    : __res_(upstream), __chunk_(nullptr), __options_(opts)
+{
+    __options_.max_blocks_per_chunk = 0;
+    __options_.largest_required_pool_block = 0;
+}
+
+unsynchronized_pool_resource::~unsynchronized_pool_resource()
+{
+    release();
+}
+
+// 23.12.5.4, mem.res.pool.mem
+
+void unsynchronized_pool_resource::release()
+{
+    __pool_resource_chunk *next = nullptr;
+    for (__pool_resource_chunk *chunk = __chunk_; chunk != nullptr; chunk = next) {
+        next = chunk->next;
+        if (chunk->allocation) {
+            __res_->deallocate(chunk->allocation, chunk->bytes, chunk->alignment);
+            chunk->allocation = nullptr;
+        }
+        __res_->deallocate(chunk, sizeof(__pool_resource_chunk), alignof(__pool_resource_chunk));
+        __chunk_ = next;
+    }
+}
+
+void* unsynchronized_pool_resource::do_allocate(size_t bytes, size_t align)
+{
+    __mr_holder<void> allocation(__res_, bytes, align);
+    __mr_holder<__pool_resource_chunk> chunk(__res_, sizeof(__pool_resource_chunk), alignof(__pool_resource_chunk));
+    chunk->allocation = allocation.release();
+    chunk->bytes = bytes;
+    chunk->alignment = align;
+    chunk->next = __chunk_;
+    __chunk_ = chunk.release();
+    return __chunk_->allocation;
+
+    // A pointer to allocated storage (6.6.4.4.1) with a size of at least bytes.
+    // The size and alignment of the allocated memory shall meet the requirements for
+    // a class derived from memory_resource (23.12).
+    // If the pool selected for a block of size bytes is unable to satisfy the memory request
+    // from its own internal data structures, it will call upstream_resource()->allocate()
+    // to obtain more memory. If bytes is larger than that which the largest pool can handle,
+    // then memory will be allocated using upstream_resource()->allocate().
+}
+
+void unsynchronized_pool_resource::do_deallocate(void* p, size_t bytes, size_t align)
+{
+    // Returns the memory at p to the pool. It is unspecified if, or under what circumstances,
+    // this operation will result in a call to upstream_resource()->deallocate().
+
+    for (__pool_resource_chunk **pchunk = &__chunk_; *pchunk != nullptr; pchunk = &(*pchunk)->next) {
+        __pool_resource_chunk *chunk = *pchunk;
+        if (chunk->allocation == p) {
+            __res_->deallocate(p, bytes, align);
+            chunk->allocation = nullptr;
+            __pool_resource_chunk *next = chunk->next;
+            __res_->deallocate(chunk, sizeof(__pool_resource_chunk), alignof(__pool_resource_chunk));
+            *pchunk = next;
+            break;
+        }
+    }
 }
 
 } // namespace pmr
