@@ -447,29 +447,29 @@ private:
 
 // 23.12.6, mem.res.monotonic.buffer
 
+struct __monotonic_buffer_header {
+    void *__start_;
+    __monotonic_buffer_header *__next_;
+    size_t __capacity_;
+    size_t __alignment_;
+    size_t __used_;
+};
+
 class _LIBCPP_TYPE_VIS monotonic_buffer_resource : public memory_resource
 {
-    static const size_t __default_buffer_size = 1024;
+    static const size_t __default_buffer_capacity = 1024;
+    static const size_t __default_buffer_alignment = 16;
 
 public:
     _LIBCPP_INLINE_VISIBILITY
     explicit monotonic_buffer_resource(memory_resource* __upstream)
-        : __res_(__upstream), __current_buffer_(), __next_buffer_size_(__default_buffer_size) {}
+        : monotonic_buffer_resource(nullptr, __default_buffer_capacity, __upstream) {}
 
     _LIBCPP_INLINE_VISIBILITY
     monotonic_buffer_resource(size_t __initial_size, memory_resource* __upstream)
-        : __res_(__upstream), __current_buffer_(), __next_buffer_size_(__initial_size) {}
+        : monotonic_buffer_resource(nullptr, __initial_size, __upstream) {}
 
-    _LIBCPP_INLINE_VISIBILITY
-    monotonic_buffer_resource(void* __buffer, size_t __buffer_size, memory_resource* __upstream)
-        : __res_(__upstream), __current_buffer_(__buffer), __next_buffer_size_(__buffer_size)
-    {
-        // Sets upstream_rsrc to upstream, current_buffer to buffer, and next_buffer_size to buffer_size
-        // (but not less than 1), then increases next_buffer_size by an implementation-defined growth factor
-        // (which need not be integral).
-        if (__buffer_size == 0)
-            __next_buffer_size_ = __default_buffer_size;
-    }
+    monotonic_buffer_resource(void* __buffer, size_t __buffer_size, memory_resource* __upstream);
 
     _LIBCPP_INLINE_VISIBILITY
     monotonic_buffer_resource()
@@ -486,9 +486,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     monotonic_buffer_resource(const monotonic_buffer_resource&) = delete;
 
-    _LIBCPP_INLINE_VISIBILITY
-    virtual ~monotonic_buffer_resource()
-        { release(); }
+    virtual ~monotonic_buffer_resource();
 
     monotonic_buffer_resource& operator=(const monotonic_buffer_resource&) = delete;
 
@@ -511,8 +509,7 @@ protected:
 
 private:
     memory_resource* __res_;
-    void* __current_buffer_;
-    size_t __next_buffer_size_;
+    __monotonic_buffer_header __original_;
 };
 
 } // namespace pmr

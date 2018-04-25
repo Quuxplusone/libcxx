@@ -250,6 +250,86 @@ void unsynchronized_pool_resource::do_deallocate(void* p, size_t bytes, size_t a
     }
 }
 
+// 23.12.6, mem.res.monotonic.buffer
+
+static size_t get_alignment_of(intptr_t buffer)
+{
+    size_t align = 1;
+    while ((align << 1) != 0 && (buffer & ((align << 1) - 1)) == 0)
+        align <<= 1;
+    return align;
+}
+
+static size_t roundup(size_t count, size_t alignment)
+{
+    size_t mask = alignment - 1;
+    return (count + mask) & ~mask;
+}
+
+static void *try_allocate_from_chunk(__monotonic_buffer_header *header, size_t bytes, size_t align)
+{
+    if (!header || !header->__start_) return nullptr;
+    if (header->__capacity_ < bytes) return nullptr;
+    if (header->__alignment_ < align) return nullptr;
+    size_t aligned_start = roundup(header->__used_, align);
+    if (aligned_start > header->__capacity_ || bytes > (header->__capacity_ - aligned_start)) {
+        return nullptr;
+    }
+    header->__used_ = aligned_start + bytes;
+    return (void *)((char *)header->__start_ + aligned_start);
+}
+
+monotonic_buffer_resource::monotonic_buffer_resource(void* buffer, size_t buffer_size, memory_resource* upstream)
+    : __res_(upstream)
+{
+    __original_.__start_ = buffer;
+    __original_.__next_ = nullptr;
+    __original_.__capacity_ = buffer_size;
+    __original_.__alignment_ = get_alignment_of(reinterpret_cast<intptr_t>(buffer));
+    __original_.__used_ = 0;
+}
+
+monotonic_buffer_resource::~monotonic_buffer_resource()
+{
+    release();
+}
+
+void monotonic_buffer_resource::release()
+{
+    __original_.__used_ = 0;
+    while (__original_.__next_ != nullptr) {
+        __monotonic_buffer_header *header = __original_.__next_;
+        __monotonic_buffer_header *next_header = header->__next_;
+        size_t aligned_capacity = header->__capacity_ + sizeof(__monotonic_buffer_header);
+        __res_->deallocate(header->__start_, aligned_capacity, header->__alignment_);
+        __original_.__next_ = next_header;
+    }
+}
+
+void* monotonic_buffer_resource::do_allocate(size_t bytes, size_t align)
+{
+    if (void *result = try_allocate_from_chunk(&__original_, bytes, align)) {
+        return result;
+    }
+    if (void *result = try_allocate_from_chunk(__original_.__next_, bytes, align)) {
+        return result;
+    }
+    // Allocate a brand-new chunk.
+    size_t aligned_align = (align > alignof(__monotonic_buffer_header)) ? align : alignof(__monotonic_buffer_header);
+    size_t header_start = roundup(bytes, alignof(__monotonic_buffer_header));
+    size_t aligned_capacity = header_start + sizeof(__monotonic_buffer_header);
+    void *result = __res_->allocate(aligned_capacity, aligned_align);
+    __monotonic_buffer_header *header = (__monotonic_buffer_header *)((char *)result + header_start);
+    header->__start_ = result;
+    header->__capacity_ = header_start;
+    header->__alignment_ = aligned_align;
+    header->__used_ = 0;
+    header->__next_ = __original_.__next_;
+    __original_.__next_ = header;
+    return try_allocate_from_chunk(__original_.__next_, bytes, align);
+}
+
+
 } // namespace pmr
 
 _LIBCPP_END_NAMESPACE_STD
