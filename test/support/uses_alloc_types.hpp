@@ -143,7 +143,7 @@ using EnableIfB = typename std::enable_if<Value, bool>::type;
 // polymorphic allocators. However we don't want to include
 // <experimental/memory_resource> in this header. Therefore in order
 // to inject this behavior later we use a trait.
-// See test_memory_resource.hpp for more info.
+// See test_experimental_memory_resource.hpp for more info.
 template <class Alloc>
 struct TransformErasedTypeAlloc {
   using type = Alloc;

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SUPPORT_TEST_MEMORY_RESOURCE_HPP
-#define SUPPORT_TEST_MEMORY_RESOURCE_HPP
+#ifndef SUPPORT_TEST_EXPERIMENTAL_MEMORY_RESOURCE_HPP
+#define SUPPORT_TEST_EXPERIMENTAL_MEMORY_RESOURCE_HPP
 
 #include <experimental/memory_resource>
 #include <experimental/utility>
@@ -168,4 +168,4 @@ using TestResource1 = TestResourceImp<BufferProvider<>, 1>;
 using TestResource2 = TestResourceImp<BufferProvider<>, 2>;
 
 
-#endif /* SUPPORT_TEST_MEMORY_RESOURCE_HPP */
+#endif /* SUPPORT_TEST_EXPERIMENTAL_MEMORY_RESOURCE_HPP */
