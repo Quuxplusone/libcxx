@@ -261,8 +261,9 @@ protected:
         { return this == _VSTD::addressof(__other); }
 
 private:
-    memory_resource* __res_;
     __monotonic_buffer_header __original_;
+    memory_resource* __res_;
+    size_t __next_buffer_size_;
 };
 
 } // namespace pmr

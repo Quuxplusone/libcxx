@@ -287,6 +287,7 @@ monotonic_buffer_resource::monotonic_buffer_resource(void* buffer, size_t buffer
     __original_.__capacity_ = buffer_size;
     __original_.__alignment_ = get_alignment_of(reinterpret_cast<intptr_t>(buffer));
     __original_.__used_ = 0;
+    __next_buffer_size_ = buffer_size >= 1 ? buffer_size : 1;
 }
 
 monotonic_buffer_resource::~monotonic_buffer_resource()
@@ -296,11 +297,13 @@ monotonic_buffer_resource::~monotonic_buffer_resource()
 
 void monotonic_buffer_resource::release()
 {
+    const size_t header_size = sizeof(__monotonic_buffer_header);
+
     __original_.__used_ = 0;
     while (__original_.__next_ != nullptr) {
         __monotonic_buffer_header *header = __original_.__next_;
         __monotonic_buffer_header *next_header = header->__next_;
-        size_t aligned_capacity = header->__capacity_ + sizeof(__monotonic_buffer_header);
+        size_t aligned_capacity = header->__capacity_ + header_size;
         __res_->deallocate(header->__start_, aligned_capacity, header->__alignment_);
         __original_.__next_ = next_header;
     }
@@ -315,17 +318,34 @@ void* monotonic_buffer_resource::do_allocate(size_t bytes, size_t align)
         return result;
     }
     // Allocate a brand-new chunk.
-    size_t aligned_align = (align > alignof(__monotonic_buffer_header)) ? align : alignof(__monotonic_buffer_header);
-    size_t header_start = roundup(bytes, alignof(__monotonic_buffer_header));
-    size_t aligned_capacity = header_start + sizeof(__monotonic_buffer_header);
-    void *result = __res_->allocate(aligned_capacity, aligned_align);
-    __monotonic_buffer_header *header = (__monotonic_buffer_header *)((char *)result + header_start);
+    const size_t header_size = sizeof(__monotonic_buffer_header);
+    const size_t header_align = alignof(__monotonic_buffer_header);
+
+    if (align < header_align) {
+        align = header_align;
+    }
+
+    size_t aligned_capacity = roundup(bytes, header_align) + header_size;
+
+    if (aligned_capacity < __next_buffer_size_) {
+        aligned_capacity = roundup(__next_buffer_size_ - header_size, header_align) + header_size;
+    }
+
+    void *result = __res_->allocate(aligned_capacity, align);
+    __monotonic_buffer_header *header = (__monotonic_buffer_header *)((char *)result + aligned_capacity - header_size);
     header->__start_ = result;
-    header->__capacity_ = header_start;
-    header->__alignment_ = aligned_align;
+    header->__capacity_ = aligned_capacity - header_size;
+    header->__alignment_ = align;
     header->__used_ = 0;
     header->__next_ = __original_.__next_;
     __original_.__next_ = header;
+
+    size_t prospective_next_buffer_size = (__next_buffer_size_ * 5) / 4;
+    if (prospective_next_buffer_size <= __next_buffer_size_) {
+        prospective_next_buffer_size = __next_buffer_size_ + 1;
+    }
+    __next_buffer_size_ = prospective_next_buffer_size;
+
     return try_allocate_from_chunk(__original_.__next_, bytes, align);
 }
 
