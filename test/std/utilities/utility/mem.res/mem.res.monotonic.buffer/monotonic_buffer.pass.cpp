@@ -14,6 +14,7 @@
 // class monotonic_buffer_resource
 
 #include <memory_resource>
+#include <new>
 #include <type_traits>
 #include <cassert>
 
@@ -30,6 +31,23 @@ protected:
 
     virtual bool do_is_equal(std::pmr::memory_resource const &) const noexcept
     { assert(false); }
+};
+
+struct repointable_resource : public std::pmr::memory_resource
+{
+    std::pmr::memory_resource *which;
+
+    explicit repointable_resource(std::pmr::memory_resource *res) : which(res) {}
+
+protected:
+    virtual void *do_allocate(size_t size, size_t align)
+    { return which->allocate(size, align); }
+
+    virtual void do_deallocate(void *p, size_t size, size_t align)
+    { return which->deallocate(p, size, align); }
+
+    virtual bool do_is_equal(std::pmr::memory_resource const &rhs) const noexcept
+    { return which->is_equal(rhs); }
 };
 
 void test_construction_with_default_resource()
@@ -336,6 +354,44 @@ void test_overaligned_single_allocation()
     // assert(globalMemCounter.last_new_align < big_alignment);
 }
 
+void test_exception_safety()
+{
+    globalMemCounter.reset();
+    repointable_resource upstream(std::pmr::new_delete_resource());
+    alignas(16) char buffer[64];
+    std::pmr::monotonic_buffer_resource mono1(buffer, sizeof buffer, &upstream);
+    std::pmr::memory_resource & r1 = mono1;
+
+    void *res = r1.allocate(64, 16);
+    assert(res == buffer);
+    assert(globalMemCounter.checkNewCalledEq(0));
+
+    res = r1.allocate(64, 16);
+    assert(res != buffer);
+    assert(globalMemCounter.checkNewCalledEq(1));
+    assert(globalMemCounter.checkDeleteCalledEq(0));
+
+    upstream.which = std::pmr::null_memory_resource();
+    try {
+        res = r1.allocate(globalMemCounter.last_new_size, 16);
+        assert(false);
+    } catch (const std::bad_alloc&) {
+        // we expect this
+    }
+    assert(globalMemCounter.checkNewCalledEq(1));
+    assert(globalMemCounter.checkDeleteCalledEq(0));
+
+    upstream.which = std::pmr::new_delete_resource();
+    res = r1.allocate(64, 16);
+    assert(res != buffer);
+    assert(globalMemCounter.checkNewCalledEq(2));
+    assert(globalMemCounter.checkDeleteCalledEq(0));
+
+    mono1.release();
+    assert(globalMemCounter.checkNewCalledEq(2));
+    assert(globalMemCounter.checkDeleteCalledEq(2));
+}
+
 int main()
 {
     test_construction_with_default_resource();
@@ -348,4 +404,5 @@ int main()
     test_zero_sized_initial_buffer();
     test_underaligned_initial_buffer();
     test_overaligned_single_allocation();
+    test_exception_safety();
 }
