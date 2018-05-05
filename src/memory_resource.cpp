@@ -252,7 +252,7 @@ void unsynchronized_pool_resource::do_deallocate(void* p, size_t bytes, size_t a
 
 // 23.12.6, mem.res.monotonic.buffer
 
-static size_t get_alignment_of(intptr_t buffer)
+static size_t get_alignment_of(uintptr_t buffer)
 {
     size_t align = 1;
     while ((align << 1) != 0 && (buffer & ((align << 1) - 1)) == 0)
@@ -270,8 +270,13 @@ static void *try_allocate_from_chunk(__monotonic_buffer_header *header, size_t b
 {
     if (!header || !header->__start_) return nullptr;
     if (header->__capacity_ < bytes) return nullptr;
-    if (header->__alignment_ < align) return nullptr;
-    size_t aligned_start = roundup(header->__used_, align);
+    size_t aligned_start;
+    if (header->__alignment_ < align) {
+        uintptr_t u = reinterpret_cast<uintptr_t>(header->__start_) + header->__used_;
+        aligned_start = header->__used_ + (roundup(u, align) - u);
+    } else {
+        aligned_start = roundup(header->__used_, align);
+    }
     if (aligned_start > header->__capacity_ || bytes > (header->__capacity_ - aligned_start)) {
         return nullptr;
     }
@@ -285,7 +290,7 @@ monotonic_buffer_resource::monotonic_buffer_resource(void* buffer, size_t buffer
     __original_.__start_ = buffer;
     __original_.__next_ = nullptr;
     __original_.__capacity_ = buffer_size;
-    __original_.__alignment_ = get_alignment_of(reinterpret_cast<intptr_t>(buffer));
+    __original_.__alignment_ = get_alignment_of(reinterpret_cast<uintptr_t>(buffer));
     __original_.__used_ = 0;
     __next_buffer_size_ = buffer_size >= 1 ? buffer_size : 1;
 }
