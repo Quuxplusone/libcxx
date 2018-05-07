@@ -12,6 +12,7 @@
 #ifndef _LIBCPP_HAS_NO_ATOMIC_HEADER
 #include "atomic"
 #endif
+#include "memory"
 #if !defined(_LIBCPP_HAS_NO_THREADS)
 #include "mutex"
 #endif
@@ -252,14 +253,6 @@ void unsynchronized_pool_resource::do_deallocate(void* p, size_t bytes, size_t a
 
 // 23.12.6, mem.res.monotonic.buffer
 
-static size_t get_alignment_of(uintptr_t buffer)
-{
-    size_t align = 1;
-    while ((align << 1) != 0 && (buffer & ((align << 1) - 1)) == 0)
-        align <<= 1;
-    return align;
-}
-
 static size_t roundup(size_t count, size_t alignment)
 {
     size_t mask = alignment - 1;
@@ -270,18 +263,14 @@ static void *try_allocate_from_chunk(__monotonic_buffer_header *header, size_t b
 {
     if (!header || !header->__start_) return nullptr;
     if (header->__capacity_ < bytes) return nullptr;
-    size_t aligned_start;
-    if (header->__alignment_ < align) {
-        uintptr_t u = reinterpret_cast<uintptr_t>(header->__start_) + header->__used_;
-        aligned_start = header->__used_ + (roundup(u, align) - u);
-    } else {
-        aligned_start = roundup(header->__used_, align);
-    }
-    if (aligned_start > header->__capacity_ || bytes > (header->__capacity_ - aligned_start)) {
+    void *new_ptr = static_cast<char *>(header->__start_) + header->__used_;
+    size_t new_capacity = (header->__capacity_ - header->__used_);
+    void *aligned_ptr = _VSTD::align(align, bytes, new_ptr, new_capacity);
+    if (aligned_ptr == nullptr) {
         return nullptr;
     }
-    header->__used_ = aligned_start + bytes;
-    return (void *)((char *)header->__start_ + aligned_start);
+    header->__used_ = (header->__capacity_ - new_capacity) + bytes;
+    return aligned_ptr;
 }
 
 monotonic_buffer_resource::monotonic_buffer_resource(void* buffer, size_t buffer_size, memory_resource* upstream)
@@ -290,7 +279,7 @@ monotonic_buffer_resource::monotonic_buffer_resource(void* buffer, size_t buffer
     __original_.__start_ = buffer;
     __original_.__next_ = nullptr;
     __original_.__capacity_ = buffer_size;
-    __original_.__alignment_ = get_alignment_of(reinterpret_cast<uintptr_t>(buffer));
+    __original_.__alignment_ = 1;
     __original_.__used_ = 0;
     __next_buffer_size_ = buffer_size >= 1 ? buffer_size : 1;
 }
