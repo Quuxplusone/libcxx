@@ -27,12 +27,10 @@
 #include "controlled_allocators.hpp"
 #include "test_allocator.h"
 
-namespace ex = std::pmr;
-
 template <class T>
 struct PMATest {
     TestResource R;
-    ex::polymorphic_allocator<T> A;
+    std::pmr::polymorphic_allocator<T> A;
     T* ptr;
     bool constructed;
 
@@ -96,7 +94,7 @@ template <class Alloc, class ...Args>
 void test_pmr_uses_alloc(Args&&... args)
 {
     TestResource R(12435);
-    ex::memory_resource* M = &R;
+    std::pmr::memory_resource* M = &R;
     {
         // NotUsesAllocator provides valid signatures for each uses-allocator
         // construction but does not supply the required allocator_type typedef.
@@ -156,32 +154,34 @@ void test_non_pmr_uses_alloc(AllocObj const& A, Args&&... args)
 
 int main()
 {
-    using PMR = ex::memory_resource*;
-    using PMA = ex::polymorphic_allocator<void>;
+    using PMR = std::pmr::memory_resource*;
+    using PMA = std::pmr::polymorphic_allocator<char>;
     using STDA = std::allocator<char>;
     using TESTA = test_allocator<char>;
 
     int value = 42;
     const int cvalue = 43;
     {
-        test_pmr_uses_alloc<PMR>();
         test_pmr_uses_alloc<PMA>();
-        test_pmr_uses_alloc<PMR>(value);
         test_pmr_uses_alloc<PMA>(value);
-        test_pmr_uses_alloc<PMR>(cvalue);
         test_pmr_uses_alloc<PMA>(cvalue);
-        test_pmr_uses_alloc<PMR>(cvalue, std::move(value));
         test_pmr_uses_alloc<PMA>(cvalue, std::move(value));
     }
     {
         STDA std_alloc;
         TESTA test_alloc(42);
+        PMR mem_res = std::pmr::new_delete_resource();
+
+        test_non_pmr_uses_alloc<PMR>(mem_res);
         test_non_pmr_uses_alloc<STDA>(std_alloc);
         test_non_pmr_uses_alloc<TESTA>(test_alloc);
+        test_non_pmr_uses_alloc<PMR>(mem_res, value);
         test_non_pmr_uses_alloc<STDA>(std_alloc, value);
         test_non_pmr_uses_alloc<TESTA>(test_alloc, value);
+        test_non_pmr_uses_alloc<PMR>(mem_res, cvalue);
         test_non_pmr_uses_alloc<STDA>(std_alloc, cvalue);
         test_non_pmr_uses_alloc<TESTA>(test_alloc, cvalue);
+        test_non_pmr_uses_alloc<PMR>(mem_res, cvalue, std::move(cvalue));
         test_non_pmr_uses_alloc<STDA>(std_alloc, cvalue, std::move(value));
         test_non_pmr_uses_alloc<TESTA>(test_alloc, cvalue, std::move(value));
     }
