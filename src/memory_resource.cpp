@@ -150,17 +150,66 @@ static size_t roundup(size_t count, size_t alignment)
     return (count + mask) & ~mask;
 }
 
-struct __pool_resource_chunk {
+struct __pool_resource_adhoc_pool_header {
     size_t bytes;
     size_t alignment;
     void *allocation;
-    __pool_resource_chunk *next;
+    __pool_resource_adhoc_pool_header *next;
 };
 
-// 23.12.5.3, mem.res.pool.ctor
+void __pool_resource_adhoc_pool::release(memory_resource *upstream)
+{
+    while (__first_ != nullptr) {
+        __header *next = __first_->next;
+        upstream->deallocate(__first_->allocation, __first_->bytes, __first_->alignment);
+        __first_ = next;
+    }
+}
+
+void *__pool_resource_adhoc_pool::do_allocate(memory_resource *upstream, size_t bytes, size_t align)
+{
+    const size_t header_size = sizeof(__header);
+    const size_t header_align = alignof(__header);
+
+    if (align < header_align) {
+        align = header_align;
+    }
+
+    size_t aligned_capacity = roundup(bytes, header_align) + header_size;
+
+    void *result = upstream->allocate(aligned_capacity, align);
+
+    __header *h = (__header *)((char *)result + aligned_capacity - header_size);
+    h->allocation = result;
+    h->bytes = aligned_capacity;
+    h->alignment = align;
+    h->next = __first_;
+    __first_ = h;
+    return result;
+}
+
+void __pool_resource_adhoc_pool::do_deallocate(memory_resource *upstream, void *p, size_t bytes, size_t align)
+{
+    _LIBCPP_ASSERT(__first_ != nullptr, "deallocating a block that was not allocated with this allocator");
+    if (__first_->allocation == p) {
+        __header *next = __first_->next;
+        upstream->deallocate(p, bytes, align);
+        __first_ = next;
+    } else {
+        for (__header *h = __first_; h != nullptr; h = h->next) {
+            if (h->next != nullptr && h->next->allocation == p) {
+                __header *next = h->next->next;
+                upstream->deallocate(p, bytes, align);
+                h->next = next;
+                return;
+            }
+        }
+        _LIBCPP_ASSERT(false, "deallocating a block that was not allocated with this allocator");
+    }
+}
 
 unsynchronized_pool_resource::unsynchronized_pool_resource(const pool_options& opts, memory_resource* upstream)
-    : __res_(upstream), __chunk_(nullptr), __options_(opts)
+    : __res_(upstream), __options_(opts)
 {
     __options_.max_blocks_per_chunk = 0;
     __options_.largest_required_pool_block = 0;
@@ -171,15 +220,9 @@ unsynchronized_pool_resource::~unsynchronized_pool_resource()
     release();
 }
 
-// 23.12.5.4, mem.res.pool.mem
-
 void unsynchronized_pool_resource::release()
 {
-    while (__chunk_ != nullptr) {
-        __pool_resource_chunk *next = __chunk_->next;
-        __res_->deallocate(__chunk_->allocation, __chunk_->bytes, __chunk_->alignment);
-        __chunk_ = next;
-    }
+    __adhoc_pool_.release(__res_);
 }
 
 void* unsynchronized_pool_resource::do_allocate(size_t bytes, size_t align)
@@ -192,24 +235,7 @@ void* unsynchronized_pool_resource::do_allocate(size_t bytes, size_t align)
     // to obtain more memory. If bytes is larger than that which the largest pool can handle,
     // then memory will be allocated using upstream_resource()->allocate().
 
-    const size_t header_size = sizeof(__pool_resource_chunk);
-    const size_t header_align = alignof(__pool_resource_chunk);
-
-    if (align < header_align) {
-        align = header_align;
-    }
-
-    size_t aligned_capacity = roundup(bytes, header_align) + header_size;
-
-    void *result = __res_->allocate(aligned_capacity, align);
-
-    __pool_resource_chunk *header = (__pool_resource_chunk *)((char *)result + aligned_capacity - header_size);
-    header->allocation = result;
-    header->bytes = aligned_capacity;
-    header->alignment = align;
-    header->next = __chunk_;
-    __chunk_ = header;
-    return result;
+    return __adhoc_pool_.do_allocate(__res_, bytes, align);
 }
 
 void unsynchronized_pool_resource::do_deallocate(void* p, size_t bytes, size_t align)
@@ -217,15 +243,7 @@ void unsynchronized_pool_resource::do_deallocate(void* p, size_t bytes, size_t a
     // Returns the memory at p to the pool. It is unspecified if, or under what circumstances,
     // this operation will result in a call to upstream_resource()->deallocate().
 
-    for (__pool_resource_chunk **pchunk = &__chunk_; *pchunk != nullptr; pchunk = &(*pchunk)->next) {
-        __pool_resource_chunk *chunk = *pchunk;
-        if (chunk->allocation == p) {
-            __pool_resource_chunk *next = chunk->next;
-            __res_->deallocate(p, bytes, align);
-            *pchunk = next;
-            break;
-        }
-    }
+    __adhoc_pool_.do_deallocate(__res_, p, bytes, align);
 }
 
 // 23.12.6, mem.res.monotonic.buffer

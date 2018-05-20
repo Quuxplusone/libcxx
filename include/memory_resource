@@ -83,7 +83,19 @@ struct pool_options {
 
 // 23.12.5.1, mem.res.pool.overview
 
-struct __pool_resource_chunk;
+
+struct __pool_resource_adhoc_pool_header;
+
+class __pool_resource_adhoc_pool {
+    using __header = __pool_resource_adhoc_pool_header;
+    __header *__first_;
+
+public:
+    explicit __pool_resource_adhoc_pool() : __first_(nullptr) {}
+    void release(memory_resource *__upstream);
+    void *do_allocate(memory_resource *__upstream, size_t __bytes, size_t __align);
+    void do_deallocate(memory_resource *__upstream, void *__p, size_t __bytes, size_t __align);
+};
 
 class _LIBCPP_TYPE_VIS unsynchronized_pool_resource : public memory_resource
 {
@@ -129,7 +141,7 @@ protected:
 
 private:
     memory_resource *__res_;
-    __pool_resource_chunk *__chunk_;
+    __pool_resource_adhoc_pool __adhoc_pool_;
     pool_options __options_;
 };
 
