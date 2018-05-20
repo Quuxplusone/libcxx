@@ -144,37 +144,11 @@ memory_resource * set_default_resource(memory_resource * __new_res) _NOEXCEPT
 
 // 23.12.5, mem.res.pool
 
-template<class T>
-struct __mr_holder {
-    memory_resource *res;
-    void *ptr;
-    size_t size;
-    size_t align;
-
-    __mr_holder(memory_resource *res, size_t size, size_t align)
-        : res(res), ptr(res->allocate(size, align)), size(size), align(align)
-    {}
-
-    T *release() {
-        T *result = static_cast<T*>(ptr);
-        ptr = nullptr;
-        return result;
-    }
-
-    T *get() const {
-        return static_cast<T*>(ptr);
-    }
-
-    T *operator->() const {
-        return static_cast<T*>(ptr);
-    }
-
-    ~__mr_holder() {
-        if (ptr) {
-            res->deallocate(ptr, size, align);
-        }
-    }
-};
+static size_t roundup(size_t count, size_t alignment)
+{
+    size_t mask = alignment - 1;
+    return (count + mask) & ~mask;
+}
 
 struct __pool_resource_chunk {
     size_t bytes;
@@ -201,29 +175,15 @@ unsynchronized_pool_resource::~unsynchronized_pool_resource()
 
 void unsynchronized_pool_resource::release()
 {
-    __pool_resource_chunk *next = nullptr;
-    for (__pool_resource_chunk *chunk = __chunk_; chunk != nullptr; chunk = next) {
-        next = chunk->next;
-        if (chunk->allocation) {
-            __res_->deallocate(chunk->allocation, chunk->bytes, chunk->alignment);
-            chunk->allocation = nullptr;
-        }
-        __res_->deallocate(chunk, sizeof(__pool_resource_chunk), alignof(__pool_resource_chunk));
+    while (__chunk_ != nullptr) {
+        __pool_resource_chunk *next = __chunk_->next;
+        __res_->deallocate(__chunk_->allocation, __chunk_->bytes, __chunk_->alignment);
         __chunk_ = next;
     }
 }
 
 void* unsynchronized_pool_resource::do_allocate(size_t bytes, size_t align)
 {
-    __mr_holder<void> allocation(__res_, bytes, align);
-    __mr_holder<__pool_resource_chunk> chunk(__res_, sizeof(__pool_resource_chunk), alignof(__pool_resource_chunk));
-    chunk->allocation = allocation.release();
-    chunk->bytes = bytes;
-    chunk->alignment = align;
-    chunk->next = __chunk_;
-    __chunk_ = chunk.release();
-    return __chunk_->allocation;
-
     // A pointer to allocated storage (6.6.4.4.1) with a size of at least bytes.
     // The size and alignment of the allocated memory shall meet the requirements for
     // a class derived from memory_resource (23.12).
@@ -231,6 +191,25 @@ void* unsynchronized_pool_resource::do_allocate(size_t bytes, size_t align)
     // from its own internal data structures, it will call upstream_resource()->allocate()
     // to obtain more memory. If bytes is larger than that which the largest pool can handle,
     // then memory will be allocated using upstream_resource()->allocate().
+
+    const size_t header_size = sizeof(__pool_resource_chunk);
+    const size_t header_align = alignof(__pool_resource_chunk);
+
+    if (align < header_align) {
+        align = header_align;
+    }
+
+    size_t aligned_capacity = roundup(bytes, header_align) + header_size;
+
+    void *result = __res_->allocate(aligned_capacity, align);
+
+    __pool_resource_chunk *header = (__pool_resource_chunk *)((char *)result + aligned_capacity - header_size);
+    header->allocation = result;
+    header->bytes = aligned_capacity;
+    header->alignment = align;
+    header->next = __chunk_;
+    __chunk_ = header;
+    return result;
 }
 
 void unsynchronized_pool_resource::do_deallocate(void* p, size_t bytes, size_t align)
@@ -241,10 +220,8 @@ void unsynchronized_pool_resource::do_deallocate(void* p, size_t bytes, size_t a
     for (__pool_resource_chunk **pchunk = &__chunk_; *pchunk != nullptr; pchunk = &(*pchunk)->next) {
         __pool_resource_chunk *chunk = *pchunk;
         if (chunk->allocation == p) {
-            __res_->deallocate(p, bytes, align);
-            chunk->allocation = nullptr;
             __pool_resource_chunk *next = chunk->next;
-            __res_->deallocate(chunk, sizeof(__pool_resource_chunk), alignof(__pool_resource_chunk));
+            __res_->deallocate(p, bytes, align);
             *pchunk = next;
             break;
         }
@@ -252,12 +229,6 @@ void unsynchronized_pool_resource::do_deallocate(void* p, size_t bytes, size_t a
 }
 
 // 23.12.6, mem.res.monotonic.buffer
-
-static size_t roundup(size_t count, size_t alignment)
-{
-    size_t mask = alignment - 1;
-    return (count + mask) & ~mask;
-}
 
 static void *try_allocate_from_chunk(__monotonic_buffer_header *header, size_t bytes, size_t align)
 {
