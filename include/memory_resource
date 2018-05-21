@@ -97,8 +97,16 @@ public:
     void do_deallocate(memory_resource *__upstream, void *__p, size_t __bytes, size_t __align);
 };
 
+class __pool_resource_fixed_pool;
+
 class _LIBCPP_TYPE_VIS unsynchronized_pool_resource : public memory_resource
 {
+    static const size_t __smallest_block_size = 8;
+    static const int __log2_smallest_block_size = 3;
+
+    size_t __pool_block_size(int __i) const;
+    int __pool_index(size_t __bytes, size_t __align) const;
+
 public:
     unsynchronized_pool_resource(const pool_options& __opts, memory_resource* __upstream);
 
@@ -142,6 +150,8 @@ protected:
 private:
     memory_resource *__res_;
     __pool_resource_adhoc_pool __adhoc_pool_;
+    __pool_resource_fixed_pool *__fixed_pools_;
+    int __num_fixed_pools_;
     pool_options __options_;
 };
 

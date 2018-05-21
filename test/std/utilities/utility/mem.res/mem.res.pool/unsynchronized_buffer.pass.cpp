@@ -166,6 +166,32 @@ void test_overaligned_single_allocation()
     assert(globalMemCounter.checkNewCalledGreaterThan(1));
 }
 
+void test_reuse()
+{
+    globalMemCounter.reset();
+    std::pmr::pool_options opts { 1, 256 };
+    std::pmr::unsynchronized_pool_resource unsync1(opts, std::pmr::new_delete_resource());
+    std::pmr::memory_resource & r1 = unsync1;
+
+    void *ret = r1.allocate(8);
+    assert(ret != nullptr);
+    assert(is_aligned_to(ret, 8));
+    assert(globalMemCounter.checkNewCalledGreaterThan(0));
+    int new_called = globalMemCounter.new_called;
+
+    // After deallocation, the pool for 8-byte blocks should have at least one vacancy.
+    r1.deallocate(ret, 8);
+    assert(globalMemCounter.new_called == new_called);
+    assert(globalMemCounter.checkDeleteCalledEq(0));
+
+    // This should return an existing block from the pool: no new allocations.
+    ret = r1.allocate(8);
+    assert(ret != nullptr);
+    assert(is_aligned_to(ret, 8));
+    assert(globalMemCounter.new_called == new_called);
+    assert(globalMemCounter.checkDeleteCalledEq(0));
+}
+
 int main()
 {
     test_construction_with_default_resource();
@@ -173,4 +199,5 @@ int main()
     test_equality();
     test_allocate_deallocate();
     test_overaligned_single_allocation();
+    test_reuse();
 }

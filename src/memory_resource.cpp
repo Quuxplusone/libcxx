@@ -208,11 +208,135 @@ void __pool_resource_adhoc_pool::do_deallocate(memory_resource *upstream, void *
     }
 }
 
-unsynchronized_pool_resource::unsynchronized_pool_resource(const pool_options& opts, memory_resource* upstream)
-    : __res_(upstream), __options_(opts)
+struct __pool_resource_vacancy_header {
+    __pool_resource_vacancy_header *next_vacancy;
+};
+
+struct __pool_resource_fixed_pool_header {
+    __pool_resource_vacancy_header *first_vacancy;
+    size_t bytes;
+    size_t alignment;
+    void *allocation;
+    __pool_resource_fixed_pool_header *next;
+
+    bool allocation_contains(const char *p) const {
+        // TODO: This part technically relies on undefined behavior.
+        return allocation <= p && p < ((char*)allocation + bytes);
+    }
+};
+
+class __pool_resource_fixed_pool {
+    using __header = __pool_resource_fixed_pool_header;
+    __header *__first_;
+
+public:
+    explicit __pool_resource_fixed_pool() : __first_(nullptr) {}
+    void release(memory_resource *upstream);
+    void *try_allocate_from_vacancies();
+    void *do_allocate_with_new_chunk(memory_resource *upstream, size_t block_size);
+    void do_evacuate(void *__p);
+
+    static const size_t __default_alignment = alignof(max_align_t);
+};
+
+void __pool_resource_fixed_pool::release(memory_resource *upstream)
 {
+    while (__first_ != nullptr) {
+        __header *next = __first_->next;
+        upstream->deallocate(__first_->allocation, __first_->bytes, __first_->alignment);
+        __first_ = next;
+    }
+}
+
+void *__pool_resource_fixed_pool::try_allocate_from_vacancies()
+{
+    for (__header *h = __first_; h != nullptr; h = h->next) {
+        if (h->first_vacancy != nullptr) {
+            void *result = h->first_vacancy;
+            h->first_vacancy = h->first_vacancy->next_vacancy;
+            return result;
+        }
+    }
+    return nullptr;
+}
+
+void *__pool_resource_fixed_pool::do_allocate_with_new_chunk(memory_resource *upstream, size_t block_size)
+{
+    static_assert(__default_alignment >= alignof(std::max_align_t), "");
+    static_assert(__default_alignment >= alignof(__header), "");
+    static_assert(__default_alignment >= alignof(__pool_resource_vacancy_header), "");
+
+    const size_t header_size = sizeof(__header);
+
+    size_t aligned_capacity = roundup(block_size, alignof(__header)) + header_size;
+
+    void *result = upstream->allocate(aligned_capacity, __default_alignment);
+
+    __header *h = (__header *)((char *)result + aligned_capacity - header_size);
+    h->allocation = result;
+    h->bytes = aligned_capacity;
+    h->alignment = __default_alignment;
+    h->next = __first_;
+    h->first_vacancy = nullptr;
+    __first_ = h;
+    return result;
+}
+
+void __pool_resource_fixed_pool::do_evacuate(void *p)
+{
+    _LIBCPP_ASSERT(__first_ != nullptr, "deallocating a block that was not allocated with this allocator");
+    for (__header *h = __first_; h != nullptr; h = h->next) {
+        if (h->allocation_contains((char*)p)) {
+            __pool_resource_vacancy_header *v = (__pool_resource_vacancy_header *)(p);
+            v->next_vacancy = h->first_vacancy;
+            h->first_vacancy = v;
+            return;
+        }
+    }
+    _LIBCPP_ASSERT(false, "deallocating a block that was not allocated with this allocator");
+}
+
+size_t unsynchronized_pool_resource::__pool_block_size(int i) const
+{
+    return size_t(1) << (i + __log2_smallest_block_size);
+}
+
+int unsynchronized_pool_resource::__pool_index(size_t bytes, size_t align) const
+{
+    if (align > alignof(std::max_align_t) || bytes > (1 << __num_fixed_pools_)) {
+        return __num_fixed_pools_;
+    } else if (bytes <= __smallest_block_size) {
+        return 0;
+    } else {
+        int i = 0;
+        bytes -= 1;
+        bytes >>= __log2_smallest_block_size;
+        while (bytes != 0) {
+            bytes >>= 1;
+            i += 1;
+        }
+        return i;
+    }
+}
+
+unsynchronized_pool_resource::unsynchronized_pool_resource(const pool_options& opts, memory_resource* upstream)
+    : __res_(upstream), __fixed_pools_(nullptr), __options_(opts)
+{
+    if (__options_.largest_required_pool_block == 0) {
+        __options_.largest_required_pool_block = (size_t(1) << 20);
+    } else if (__options_.largest_required_pool_block < __smallest_block_size) {
+        __options_.largest_required_pool_block = __smallest_block_size;
+    } else if (__options_.largest_required_pool_block > (size_t(1) << 30)) {
+        __options_.largest_required_pool_block = (size_t(1) << 30);
+    }
+    __num_fixed_pools_ = 1;
+    size_t capacity = __smallest_block_size;
+    while (capacity < __options_.largest_required_pool_block) {
+        capacity <<= 1;
+        __num_fixed_pools_ += 1;
+    }
+
     __options_.max_blocks_per_chunk = 0;
-    __options_.largest_required_pool_block = 0;
 }
 
 unsynchronized_pool_resource::~unsynchronized_pool_resource()
@@ -223,6 +347,14 @@ unsynchronized_pool_resource::~unsynchronized_pool_resource()
 void unsynchronized_pool_resource::release()
 {
     __adhoc_pool_.release(__res_);
+    if (__fixed_pools_ != nullptr) {
+        const int n = __num_fixed_pools_;
+        for (int i=0; i < n; ++i) {
+            __fixed_pools_[i].release(__res_);
+        }
+        __res_->deallocate(__fixed_pools_, __num_fixed_pools_ * sizeof(__pool_resource_fixed_pool), alignof(__pool_resource_fixed_pool));
+        __fixed_pools_ = nullptr;
+    }
 }
 
 void* unsynchronized_pool_resource::do_allocate(size_t bytes, size_t align)
@@ -235,7 +367,25 @@ void* unsynchronized_pool_resource::do_allocate(size_t bytes, size_t align)
     // to obtain more memory. If bytes is larger than that which the largest pool can handle,
     // then memory will be allocated using upstream_resource()->allocate().
 
-    return __adhoc_pool_.do_allocate(__res_, bytes, align);
+    int i = __pool_index(bytes, align);
+    if (i == __num_fixed_pools_) {
+        return __adhoc_pool_.do_allocate(__res_, bytes, align);
+    } else {
+        if (__fixed_pools_ == nullptr) {
+            using P = __pool_resource_fixed_pool;
+            __fixed_pools_ = (P*)__res_->allocate(__num_fixed_pools_ * sizeof(P), alignof(P));
+            P *first = __fixed_pools_;
+            P *last = __fixed_pools_ + __num_fixed_pools_;
+            for (P *pool = first; pool != last; ++pool) {
+                ::new((void*)pool) P;
+            }
+        }
+        void *result = __fixed_pools_[i].try_allocate_from_vacancies();
+        if (result == nullptr) {
+            result = __fixed_pools_[i].do_allocate_with_new_chunk(__res_, __pool_block_size(i));
+        }
+        return result;
+    }
 }
 
 void unsynchronized_pool_resource::do_deallocate(void* p, size_t bytes, size_t align)
@@ -243,7 +393,13 @@ void unsynchronized_pool_resource::do_deallocate(void* p, size_t bytes, size_t a
     // Returns the memory at p to the pool. It is unspecified if, or under what circumstances,
     // this operation will result in a call to upstream_resource()->deallocate().
 
-    __adhoc_pool_.do_deallocate(__res_, p, bytes, align);
+    int i = __pool_index(bytes, align);
+    if (i == __num_fixed_pools_) {
+        return __adhoc_pool_.do_deallocate(__res_, p, bytes, align);
+    } else {
+        _LIBCPP_ASSERT(__fixed_pools_ != nullptr, "deallocating a block that was not allocated with this allocator");
+        __fixed_pools_[i].do_evacuate(p);
+    }
 }
 
 // 23.12.6, mem.res.monotonic.buffer
