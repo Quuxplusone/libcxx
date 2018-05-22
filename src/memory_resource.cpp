@@ -233,8 +233,12 @@ public:
     explicit __pool_resource_fixed_pool() : __first_(nullptr) {}
     void release(memory_resource *upstream);
     void *try_allocate_from_vacancies();
-    void *do_allocate_with_new_chunk(memory_resource *upstream, size_t block_size);
+    void *do_allocate_with_new_chunk(memory_resource *upstream, size_t block_size, size_t chunk_size);
     void do_evacuate(void *__p);
+
+    size_t previous_chunk_size_in_bytes() const {
+        return __first_ ? __first_->bytes : 0;
+    }
 
     static const size_t __default_alignment = alignof(max_align_t);
 };
@@ -260,7 +264,7 @@ void *__pool_resource_fixed_pool::try_allocate_from_vacancies()
     return nullptr;
 }
 
-void *__pool_resource_fixed_pool::do_allocate_with_new_chunk(memory_resource *upstream, size_t block_size)
+void *__pool_resource_fixed_pool::do_allocate_with_new_chunk(memory_resource *upstream, size_t block_size, size_t chunk_size)
 {
     static_assert(__default_alignment >= alignof(std::max_align_t), "");
     static_assert(__default_alignment >= alignof(__header), "");
@@ -268,7 +272,7 @@ void *__pool_resource_fixed_pool::do_allocate_with_new_chunk(memory_resource *up
 
     const size_t header_size = sizeof(__header);
 
-    size_t aligned_capacity = roundup(block_size, alignof(__header)) + header_size;
+    size_t aligned_capacity = roundup(chunk_size, alignof(__header)) + header_size;
 
     void *result = upstream->allocate(aligned_capacity, __default_alignment);
 
@@ -277,8 +281,24 @@ void *__pool_resource_fixed_pool::do_allocate_with_new_chunk(memory_resource *up
     h->bytes = aligned_capacity;
     h->alignment = __default_alignment;
     h->next = __first_;
-    h->first_vacancy = nullptr;
     __first_ = h;
+
+    if (chunk_size > block_size) {
+        auto vacancy_header = [&](size_t i) -> __pool_resource_vacancy_header& {
+            return *(__pool_resource_vacancy_header *)((char *)(result) + (i * block_size));
+        };
+        h->first_vacancy = &vacancy_header(1);
+        for (size_t i = 1; i != chunk_size / block_size; ++i) {
+            if (i + 1 == chunk_size / block_size) {
+                vacancy_header(i).next_vacancy = nullptr;
+            } else {
+                vacancy_header(i).next_vacancy = &vacancy_header(i+1);
+            }
+        }
+    } else {
+        h->first_vacancy = nullptr;
+    }
+
     return result;
 }
 
@@ -298,7 +318,12 @@ void __pool_resource_fixed_pool::do_evacuate(void *p)
 
 size_t unsynchronized_pool_resource::__pool_block_size(int i) const
 {
-    return size_t(1) << (i + __log2_smallest_block_size);
+    return size_t(1) << __log2_pool_block_size(i);
+}
+
+int unsynchronized_pool_resource::__log2_pool_block_size(int i) const
+{
+    return (i + __log2_smallest_block_size);
 }
 
 int unsynchronized_pool_resource::__pool_index(size_t bytes, size_t align) const
@@ -323,20 +348,27 @@ unsynchronized_pool_resource::unsynchronized_pool_resource(const pool_options& o
     : __res_(upstream), __fixed_pools_(nullptr), __options_(opts)
 {
     if (__options_.largest_required_pool_block == 0) {
-        __options_.largest_required_pool_block = (size_t(1) << 20);
+        __options_.largest_required_pool_block = __default_largest_block_size;
     } else if (__options_.largest_required_pool_block < __smallest_block_size) {
         __options_.largest_required_pool_block = __smallest_block_size;
-    } else if (__options_.largest_required_pool_block > (size_t(1) << 30)) {
-        __options_.largest_required_pool_block = (size_t(1) << 30);
+    } else if (__options_.largest_required_pool_block > __max_largest_block_size) {
+        __options_.largest_required_pool_block = __max_largest_block_size;
     }
+
+    if (__options_.max_blocks_per_chunk == 0) {
+        __options_.max_blocks_per_chunk = __max_blocks_per_chunk;
+    } else if (__options_.max_blocks_per_chunk < __min_blocks_per_chunk) {
+        __options_.max_blocks_per_chunk = __min_blocks_per_chunk;
+    } else if (__options_.max_blocks_per_chunk > __max_blocks_per_chunk) {
+        __options_.max_blocks_per_chunk = __max_blocks_per_chunk;
+    }
+
     __num_fixed_pools_ = 1;
     size_t capacity = __smallest_block_size;
     while (capacity < __options_.largest_required_pool_block) {
         capacity <<= 1;
         __num_fixed_pools_ += 1;
     }
-
-    __options_.max_blocks_per_chunk = 0;
 }
 
 unsynchronized_pool_resource::~unsynchronized_pool_resource()
@@ -382,7 +414,41 @@ void* unsynchronized_pool_resource::do_allocate(size_t bytes, size_t align)
         }
         void *result = __fixed_pools_[i].try_allocate_from_vacancies();
         if (result == nullptr) {
-            result = __fixed_pools_[i].do_allocate_with_new_chunk(__res_, __pool_block_size(i));
+            static_assert((__max_bytes_per_chunk*5)/4 > __max_bytes_per_chunk, "unsigned overflow is possible");
+            auto min = [](size_t a, size_t b) { return a < b ? a : b; };
+            auto max = [](size_t a, size_t b) { return a < b ? b : a; };
+
+            size_t prev_chunk_size_in_bytes = __fixed_pools_[i].previous_chunk_size_in_bytes();
+            size_t prev_chunk_size_in_blocks = prev_chunk_size_in_bytes >> __log2_pool_block_size(i);
+
+            size_t chunk_size_in_blocks;
+
+            if (prev_chunk_size_in_blocks == 0) {
+                size_t min_blocks_per_chunk = max(
+                    __min_bytes_per_chunk >> __log2_pool_block_size(i),
+                    __min_blocks_per_chunk
+                );
+                chunk_size_in_blocks = min_blocks_per_chunk;
+            } else {
+                chunk_size_in_blocks = (prev_chunk_size_in_blocks*5)/4;
+            }
+
+
+            size_t max_blocks_per_chunk = min(
+                (__max_bytes_per_chunk >> __log2_pool_block_size(i)),
+                min(
+                    __max_blocks_per_chunk,
+                    __options_.max_blocks_per_chunk
+                )
+            );
+            if (chunk_size_in_blocks > max_blocks_per_chunk) {
+                chunk_size_in_blocks = max_blocks_per_chunk;
+            }
+
+            size_t block_size = __pool_block_size(i);
+
+            size_t chunk_size_in_bytes = (chunk_size_in_blocks << __log2_pool_block_size(i));
+            result = __fixed_pools_[i].do_allocate_with_new_chunk(__res_, block_size, chunk_size_in_bytes);
         }
         return result;
     }
