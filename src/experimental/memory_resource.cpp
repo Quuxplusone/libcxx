@@ -155,4 +155,83 @@ memory_resource * set_default_resource(memory_resource * __new_res) _NOEXCEPT
     return __default_memory_resource(true, __new_res);
 }
 
+// 23.12.6, mem.res.monotonic.buffer
+
+static size_t roundup(size_t count, size_t alignment)
+{
+    size_t mask = alignment - 1;
+    return (count + mask) & ~mask;
+}
+
+void *monotonic_buffer_resource::__initial_header::__try_allocate_from_chunk(
+    size_t bytes, size_t align)
+{
+    if (!__cur_)
+        return nullptr;
+    void *new_ptr = static_cast<void*>(__cur_);
+    size_t new_capacity = (__end_ - __cur_);
+    void *aligned_ptr = _VSTD::align(align, bytes, new_ptr, new_capacity);
+    if (aligned_ptr != nullptr)
+        __cur_ = static_cast<char*>(new_ptr) + bytes;
+    return aligned_ptr;
+}
+
+void *monotonic_buffer_resource::__chunk_header::__try_allocate_from_chunk(
+    size_t bytes, size_t align)
+{
+    void *new_ptr = static_cast<void*>(__cur_);
+    size_t new_capacity = (reinterpret_cast<char*>(this) - __cur_);
+    void *aligned_ptr = _VSTD::align(align, bytes, new_ptr, new_capacity);
+    if (aligned_ptr != nullptr)
+        __cur_ = static_cast<char*>(new_ptr) + bytes;
+    return aligned_ptr;
+}
+
+void* monotonic_buffer_resource::do_allocate(size_t bytes, size_t align)
+{
+    const size_t header_size = sizeof(__chunk_header);
+    const size_t header_align = alignof(__chunk_header);
+
+    auto previous_allocation_size = [&]() {
+        if (__chunks_ != nullptr)
+            return __chunks_->__allocation_size();
+
+        size_t newsize = (__initial_.__start_ != nullptr) ?
+            (__initial_.__end_ - __initial_.__start_) : __initial_.__size_;
+
+        return roundup(newsize, header_align) + header_size;
+    };
+
+    if (void *result = __initial_.__try_allocate_from_chunk(bytes, align))
+        return result;
+    if (__chunks_ != nullptr) {
+        if (void *result = __chunks_->__try_allocate_from_chunk(bytes, align))
+            return result;
+    }
+
+    // Allocate a brand-new chunk.
+
+    if (align < header_align)
+        align = header_align;
+
+    size_t aligned_capacity = roundup(bytes, header_align) + header_size;
+    size_t previous_capacity = previous_allocation_size();
+
+    if (aligned_capacity <= previous_capacity) {
+        size_t newsize = 2 * (previous_capacity - header_size);
+        aligned_capacity = roundup(newsize, header_align) + header_size;
+    }
+
+    char *start = (char *)__res_->allocate(aligned_capacity, align);
+    __chunk_header *header =
+        (__chunk_header *)(start + aligned_capacity - header_size);
+    header->__next_ = __chunks_;
+    header->__start_ = start;
+    header->__cur_ = start;
+    header->__align_ = align;
+    __chunks_ = header;
+
+    return __chunks_->__try_allocate_from_chunk(bytes, align);
+}
+
 _LIBCPP_END_NAMESPACE_LFTS_PMR
