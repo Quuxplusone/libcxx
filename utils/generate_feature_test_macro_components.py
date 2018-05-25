@@ -285,7 +285,6 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
      "c++17": 201603L,
    },
    "headers": ["memory_resource"],
-   "unimplemented": True,
    },
   {"name": "__cpp_lib_boyer_moore_searcher",
    "values": {

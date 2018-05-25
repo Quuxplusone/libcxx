@@ -352,6 +352,10 @@ module std [system] {
     header "memory"
     export *
   }
+  module memory_resource {
+    header "memory_resource"
+    export *
+  }
   module mutex {
     header "mutex"
     export *
@@ -501,6 +505,7 @@ module std [system] {
   module __functional_base { header "__functional_base" export * }
   module __hash_table { header "__hash_table" export * }
   module __locale { header "__locale" export * }
+  module __memory_resource_base { header "__memory_resource_base" export * }
   module __mutex_base { header "__mutex_base" export * }
   module __split_buffer { header "__split_buffer" export * }
   module __sso_allocator { header "__sso_allocator" export * }

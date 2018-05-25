@@ -9,10 +9,10 @@
 #ifndef SUPPORT_TEST_MEMORY_RESOURCE_HPP
 #define SUPPORT_TEST_MEMORY_RESOURCE_HPP
 
-#include <experimental/memory_resource>
-#include <experimental/utility>
 #include <memory>
+#include <memory_resource>
 #include <type_traits>
+#include <utility>
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
@@ -22,16 +22,8 @@
 #include "controlled_allocators.hpp"
 #include "uses_alloc_types.hpp"
 
-// FIXME: This is a hack to allow uses_allocator_types.hpp to work with
-// erased_type. However we can't define that behavior directly in the header
-// because it can't include <experimental/memory_resource>
-template <>
-struct TransformErasedTypeAlloc<std::experimental::erased_type> {
-  using type = std::experimental::pmr::polymorphic_allocator<int>;
-};
-
 template <class ProviderT, int = 0>
-class TestResourceImp : public std::experimental::pmr::memory_resource
+class TestResourceImp : public std::pmr::memory_resource
 {
 public:
     static int resource_alive;
@@ -45,7 +37,7 @@ public:
         resource_destructed = 0;
     }
 
-    using memory_resource = std::experimental::pmr::memory_resource;
+    using memory_resource = std::pmr::memory_resource;
     using Provider = ProviderT;
 
     int value;

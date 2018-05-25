@@ -10,6 +10,7 @@ set(files
   __hash_table
   __libcpp_version
   __locale
+  __memory_resource_base
   __mutex_base
   __node_handle
   __nullptr
@@ -118,6 +119,7 @@ set(files
   map
   math.h
   memory
+  memory_resource
   module.modulemap
   mutex
   new
