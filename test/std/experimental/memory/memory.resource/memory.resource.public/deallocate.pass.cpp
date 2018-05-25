@@ -27,7 +27,7 @@
 #include <cstddef>
 #include <cassert>
 
-#include "test_memory_resource.hpp"
+#include "test_experimental_memory_resource.hpp"
 
 using std::experimental::pmr::memory_resource;
 

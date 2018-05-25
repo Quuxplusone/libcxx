@@ -19,7 +19,7 @@
 #include <type_traits>
 #include <memory>
 #include <cassert>
-#include "test_memory_resource.hpp"
+#include "test_experimental_memory_resource.hpp"
 
 using std::size_t;
 namespace ex = std::experimental::pmr;

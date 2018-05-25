@@ -1,0 +1,359 @@
+// -*- C++ -*-
+//===------------------------ memory_resource -----------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef _LIBCPP_MEMORY_RESOURCE
+#define _LIBCPP_MEMORY_RESOURCE
+
+#ifndef _LIBCPP_CXX03_LANG
+
+/**
+    memory_resource synopsis
+
+// C++17
+
+namespace std {
+namespace pmr {
+
+  // Global memory resources
+  memory_resource* new_delete_resource() noexcept;
+  memory_resource* null_memory_resource() noexcept;
+
+  // Pool resource classes
+  struct pool_options;
+  class synchronized_pool_resource;
+  class unsynchronized_pool_resource;
+  class monotonic_buffer_resource;
+
+} // namespace pmr
+} // namespace std
+
+ */
+
+#include <__config>
+#include <__functional_base>
+#include <__memory_resource_base>
+#include <limits>
+#include <memory>
+#if !defined(_LIBCPP_HAS_NO_THREADS)
+#include <mutex>
+#endif
+#include <new>
+#include <stdexcept>
+#include <type_traits>
+#include <utility>
+#include <cstddef>
+#include <cstdlib>
+#include <__debug>
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#pragma GCC system_header
+#endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+namespace pmr
+{
+
+// 23.12.4, mem.res.global
+
+_LIBCPP_FUNC_VIS
+memory_resource * new_delete_resource() _NOEXCEPT;
+
+_LIBCPP_FUNC_VIS
+memory_resource * null_memory_resource() _NOEXCEPT;
+
+// 23.12.5, mem.res.pool
+
+// 23.12.5.2, mem.res.pool.options
+
+struct _LIBCPP_TYPE_VIS pool_options {
+    size_t max_blocks_per_chunk = 0;
+    size_t largest_required_pool_block = 0;
+};
+
+// 23.12.5.1, mem.res.pool.overview
+
+
+class _LIBCPP_TYPE_VIS unsynchronized_pool_resource : public memory_resource
+{
+    class __fixed_pool;
+
+    class __adhoc_pool {
+        struct __chunk_header;
+        __chunk_header *__first_;
+
+    public:
+        _LIBCPP_INLINE_VISIBILITY
+        explicit __adhoc_pool() : __first_(nullptr) {}
+
+        void __release(memory_resource *__upstream);
+        void *__do_allocate(memory_resource *__upstream,
+                            size_t __bytes, size_t __align);
+        void __do_deallocate(memory_resource *__upstream,
+                             void *__p, size_t __bytes, size_t __align);
+    };
+
+    static const size_t __min_blocks_per_chunk = 16;
+    static const size_t __min_bytes_per_chunk = 1024;
+    static const size_t __max_blocks_per_chunk = (size_t(1) << 20);
+    static const size_t __max_bytes_per_chunk = (size_t(1) << 30);
+
+    static const int __log2_smallest_block_size = 3;
+    static const size_t __smallest_block_size = 8;
+    static const size_t __default_largest_block_size = (size_t(1) << 20);
+    static const size_t __max_largest_block_size = (size_t(1) << 30);
+
+    size_t __pool_block_size(int __i) const;
+    int __log2_pool_block_size(int __i) const;
+    int __pool_index(size_t __bytes, size_t __align) const;
+
+public:
+    unsynchronized_pool_resource(const pool_options& __opts,
+                                 memory_resource* __upstream);
+
+    _LIBCPP_INLINE_VISIBILITY
+    unsynchronized_pool_resource()
+        : unsynchronized_pool_resource(pool_options(), get_default_resource()) {}
+
+    _LIBCPP_INLINE_VISIBILITY
+    explicit unsynchronized_pool_resource(memory_resource* __upstream)
+        : unsynchronized_pool_resource(pool_options(), __upstream) {}
+
+    _LIBCPP_INLINE_VISIBILITY
+    explicit unsynchronized_pool_resource(const pool_options& __opts)
+        : unsynchronized_pool_resource(__opts, get_default_resource()) {}
+
+    unsynchronized_pool_resource(const unsynchronized_pool_resource&) = delete;
+
+    _LIBCPP_INLINE_VISIBILITY
+    ~unsynchronized_pool_resource() override
+        { release(); }
+
+    unsynchronized_pool_resource& operator=(const unsynchronized_pool_resource&) = delete;
+
+    void release();
+
+    _LIBCPP_INLINE_VISIBILITY
+    memory_resource* upstream_resource() const
+        { return __res_; }
+
+    pool_options options() const;
+
+protected:
+    void *do_allocate(size_t __bytes, size_t __align) override; // key function
+
+    void do_deallocate(void *__p, size_t __bytes, size_t __align) override;
+
+    _LIBCPP_INLINE_VISIBILITY
+    bool do_is_equal(const memory_resource& __other) const _NOEXCEPT override
+        { return &__other == this; }
+
+private:
+    memory_resource *__res_;
+    __adhoc_pool __adhoc_pool_;
+    __fixed_pool *__fixed_pools_;
+    int __num_fixed_pools_;
+    uint32_t __options_max_blocks_per_chunk_;
+};
+
+class _LIBCPP_TYPE_VIS synchronized_pool_resource : public memory_resource
+{
+public:
+    _LIBCPP_INLINE_VISIBILITY
+    synchronized_pool_resource(const pool_options& __opts, memory_resource *__upstream)
+        : __unsync_(__opts, __upstream) {}
+
+    _LIBCPP_INLINE_VISIBILITY
+    synchronized_pool_resource()
+        : synchronized_pool_resource(pool_options(), get_default_resource()) {}
+
+    _LIBCPP_INLINE_VISIBILITY
+    explicit synchronized_pool_resource(memory_resource *__upstream)
+        : synchronized_pool_resource(pool_options(), __upstream) {}
+
+    _LIBCPP_INLINE_VISIBILITY
+    explicit synchronized_pool_resource(const pool_options& __opts)
+        : synchronized_pool_resource(__opts, get_default_resource()) {}
+
+    synchronized_pool_resource(const synchronized_pool_resource&) = delete;
+
+    ~synchronized_pool_resource() override = default;
+
+    synchronized_pool_resource& operator=(const synchronized_pool_resource&) = delete;
+
+    _LIBCPP_INLINE_VISIBILITY
+    void release() {
+#if !defined(_LIBCPP_HAS_NO_THREADS)
+        unique_lock<mutex> __lk(__mut_);
+#endif
+        __unsync_.release();
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    memory_resource* upstream_resource() const
+        { return __unsync_.upstream_resource(); }
+
+    _LIBCPP_INLINE_VISIBILITY
+    pool_options options() const
+        { return __unsync_.options(); }
+
+protected:
+    _LIBCPP_INLINE_VISIBILITY
+    void* do_allocate(size_t __bytes, size_t __align) override {
+#if !defined(_LIBCPP_HAS_NO_THREADS)
+        unique_lock<mutex> __lk(__mut_);
+#endif
+        return __unsync_.allocate(__bytes, __align);
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    void do_deallocate(void *__p, size_t __bytes, size_t __align) override {
+#if !defined(_LIBCPP_HAS_NO_THREADS)
+        unique_lock<mutex> __lk(__mut_);
+#endif
+        return __unsync_.deallocate(__p, __bytes, __align);
+    }
+
+    bool do_is_equal(const memory_resource& __other) const _NOEXCEPT override; // key function
+
+private:
+#if !defined(_LIBCPP_HAS_NO_THREADS)
+    mutex __mut_;
+#endif
+    unsynchronized_pool_resource __unsync_;
+};
+
+// 23.12.6, mem.res.monotonic.buffer
+
+class _LIBCPP_TYPE_VIS monotonic_buffer_resource : public memory_resource
+{
+    static const size_t __default_buffer_capacity = 1024;
+    static const size_t __default_buffer_alignment = 16;
+
+    struct __chunk_header {
+        __chunk_header *__next_;
+        char *__start_;
+        char *__cur_;
+        size_t __align_;
+        size_t __allocation_size() {
+            return (reinterpret_cast<char*>(this) - __start_) + sizeof(*this);
+        }
+        void *__try_allocate_from_chunk(size_t, size_t);
+    };
+
+    struct __initial_header {
+        char *__start_;
+        char *__cur_;
+        union {
+            char *__end_;
+            size_t __size_;
+        };
+        void *__try_allocate_from_chunk(size_t, size_t);
+    };
+
+public:
+    _LIBCPP_INLINE_VISIBILITY
+    monotonic_buffer_resource()
+        : monotonic_buffer_resource(
+            nullptr, __default_buffer_capacity, get_default_resource()) {}
+
+    _LIBCPP_INLINE_VISIBILITY
+    explicit monotonic_buffer_resource(size_t __initial_size)
+        : monotonic_buffer_resource(
+            nullptr, __initial_size, get_default_resource()) {}
+
+    _LIBCPP_INLINE_VISIBILITY
+    monotonic_buffer_resource(void *__buffer, size_t __buffer_size)
+        : monotonic_buffer_resource(
+            __buffer, __buffer_size, get_default_resource()) {}
+
+    _LIBCPP_INLINE_VISIBILITY
+    explicit monotonic_buffer_resource(memory_resource *__upstream)
+        : monotonic_buffer_resource(
+            nullptr, __default_buffer_capacity, __upstream) {}
+
+    _LIBCPP_INLINE_VISIBILITY
+    monotonic_buffer_resource(size_t __initial_size,
+                              memory_resource *__upstream)
+        : monotonic_buffer_resource(
+            nullptr, __initial_size, __upstream) {}
+
+    _LIBCPP_INLINE_VISIBILITY
+    monotonic_buffer_resource(void *__buffer, size_t __buffer_size,
+                              memory_resource *__upstream)
+        : __res_(__upstream)
+    {
+        __initial_.__start_ = static_cast<char *>(__buffer);
+        if (__buffer != nullptr) {
+            __initial_.__cur_ = static_cast<char *>(__buffer);
+            __initial_.__end_ = static_cast<char *>(__buffer) + __buffer_size;
+        } else {
+            __initial_.__cur_ = nullptr;
+            __initial_.__size_ = __buffer_size;
+        }
+        __chunks_ = nullptr;
+    }
+
+    monotonic_buffer_resource(const monotonic_buffer_resource&) = delete;
+
+    _LIBCPP_INLINE_VISIBILITY
+    ~monotonic_buffer_resource() override
+        { release(); }
+
+    monotonic_buffer_resource& operator=(const monotonic_buffer_resource&) = delete;
+
+    _LIBCPP_INLINE_VISIBILITY
+    void release()
+    {
+        __initial_.__cur_ = __initial_.__start_;
+        while (__chunks_ != nullptr) {
+            __chunk_header *__next = __chunks_->__next_;
+            __res_->deallocate(
+                __chunks_->__start_,
+                __chunks_->__allocation_size(),
+                __chunks_->__align_
+            );
+            __chunks_ = __next;
+        }
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    memory_resource* upstream_resource() const
+        { return __res_; }
+
+protected:
+    void *do_allocate(size_t __bytes, size_t __alignment) override; // key function
+
+    _LIBCPP_INLINE_VISIBILITY
+    void do_deallocate(void*, size_t, size_t) override
+        {}
+
+    _LIBCPP_INLINE_VISIBILITY
+    bool do_is_equal(const memory_resource& __other) const _NOEXCEPT override
+        { return this == _VSTD::addressof(__other); }
+
+private:
+    __initial_header __initial_;
+    __chunk_header *__chunks_;
+    memory_resource* __res_;
+};
+
+} // namespace pmr
+
+_LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
+
+#endif /* _LIBCPP_CXX03_LANG */
+
+#endif /* _LIBCPP_MEMORY_RESOURCE */
