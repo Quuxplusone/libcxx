@@ -167,6 +167,10 @@ template <class T, class Allocator, class Predicate>
 #include <stdexcept>
 #include <version>
 
+#if _LIBCPP_STD_VER > 14
+#include <__memory_resource_base>
+#endif
+
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
@@ -3033,6 +3037,16 @@ void erase_if(deque<_Tp, _Allocator>& __c, _Predicate __pred)
 
 
 _LIBCPP_END_NAMESPACE_STD
+
+#if _LIBCPP_STD_VER > 14
+_LIBCPP_BEGIN_NAMESPACE_STD
+namespace pmr
+{
+    template <class _ValueT>
+    using deque = _VSTD::deque<_ValueT, polymorphic_allocator<_ValueT>>;
+}
+_LIBCPP_END_NAMESPACE_STD
+#endif
 
 _LIBCPP_POP_MACROS
 
