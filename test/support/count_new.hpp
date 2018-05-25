@@ -211,6 +211,11 @@ public:
         return disable_checking || n != delete_called;
     }
 
+    bool checkDeleteCalledGreaterThan(int n) const
+    {
+        return disable_checking || delete_called > n;
+    }
+
     bool checkAlignedNewCalledEq(int n) const
     {
         return disable_checking || n == aligned_new_called;
