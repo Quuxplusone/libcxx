@@ -366,6 +366,10 @@ template <class Value, class Hash, class Pred, class Alloc>
 
 #include <__debug>
 
+#if _LIBCPP_STD_VER > 14
+#include <__memory_resource_base>
+#endif
+
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
@@ -1550,5 +1554,18 @@ operator!=(const unordered_multiset<_Value, _Hash, _Pred, _Alloc>& __x,
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+#if _LIBCPP_STD_VER > 14
+_LIBCPP_BEGIN_NAMESPACE_STD
+namespace pmr
+{
+    template <class _KeyT, class _HashT = _VSTD::hash<_KeyT>, class _PredT = _VSTD::equal_to<_KeyT>>
+    using unordered_set = _VSTD::unordered_set<_KeyT, _HashT, _PredT, polymorphic_allocator<_KeyT>>;
+
+    template <class _KeyT, class _HashT = _VSTD::hash<_KeyT>, class _PredT = _VSTD::equal_to<_KeyT>>
+    using unordered_multiset = _VSTD::unordered_multiset<_KeyT, _HashT, _PredT, polymorphic_allocator<_KeyT>>;
+}
+_LIBCPP_END_NAMESPACE_STD
+#endif
 
 #endif  // _LIBCPP_UNORDERED_SET

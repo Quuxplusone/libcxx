@@ -88,6 +88,7 @@
 #include <map>
 #include <math.h>
 #include <memory>
+#include <memory_resource>
 #ifndef _LIBCPP_HAS_NO_THREADS
 #include <mutex>
 #endif
