@@ -124,6 +124,7 @@ namespace std
     template <class T>                struct is_trivially_copy_assignable;
     template <class T>                struct is_trivially_move_assignable;
     template <class T>                struct is_trivially_destructible;
+    template <class T>                struct __libcpp_is_trivially_relocatable;  // extension
 
     template <class T, class... Args> struct is_nothrow_constructible;
     template <class T>                struct is_nothrow_default_constructible;
@@ -350,6 +351,8 @@ namespace std
         = is_trivially_move_assignable<T>::value;                        // C++17
       template <class T> inline constexpr bool is_trivially_destructible_v
         = is_trivially_destructible<T>::value;                           // C++17
+      template <class T> inline constexpr bool __libcpp_is_trivially_relocatable_v
+        = __libcpp_is_trivially_relocatable<T>::value;                   // extension
       template <class T, class... Args> inline constexpr bool is_nothrow_constructible_v
         = is_nothrow_constructible<T, Args...>::value;                   // C++17
       template <class T> inline constexpr bool is_nothrow_default_constructible_v
@@ -3758,6 +3761,25 @@ template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_trivially_destructible<_Tp[]
 template <class _Tp>
 _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_trivially_destructible_v
     = is_trivially_destructible<_Tp>::value;
+#endif
+
+// __libcpp_is_trivially_relocatable
+
+template <class _Tp>
+struct _LIBCPP_TEMPLATE_VIS __libcpp_is_trivially_relocatable
+    : public integral_constant<bool,
+#if __has_extension(trivially_relocatable)
+    __is_trivially_relocatable(_Tp)
+#else
+    is_trivially_move_constructible<typename remove_all_extents<_Tp>::type>::value &&
+    is_trivially_destructible<typename remove_all_extents<_Tp>::type>::value
+#endif
+    > {};
+
+#if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
+template <class _Tp>
+_LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool __libcpp_is_trivially_relocatable_v
+    = __libcpp_is_trivially_relocatable<_Tp>::value;
 #endif
 
 // is_nothrow_constructible
