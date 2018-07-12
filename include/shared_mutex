@@ -306,7 +306,7 @@ shared_timed_mutex::try_lock_shared_until(
 }
 
 template <class _Mutex>
-class shared_lock
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_TRIVIALLY_RELOCATABLE shared_lock
 {
 public:
     typedef _Mutex mutex_type;
