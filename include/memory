@@ -3449,29 +3449,127 @@ uninitialized_move_n(_InputIt __first, _Size __n, _ForwardIt __first_res) {
 #endif
 }
 
-template <class _InputIt, class _ForwardIt>
+// uninitialized_relocate
+
+template<class _InputIt, class _ForwardIt, class _IsMemcpyable, class _IsPointers>
 inline _LIBCPP_INLINE_VISIBILITY
-_ForwardIt uninitialized_relocate(_InputIt __first, _InputIt __last, _ForwardIt __first_res) {
-    using _Vt = typename iterator_traits<_ForwardIt>::value_type;
-    auto __idx = __first_res;
-    for (; __first != __last; (void)++__idx, ++__first) {
-        ::new((void*)_VSTD::addressof(*__idx)) _Vt(std::move(*__first));
-        _VSTD::destroy_at(_VSTD::addressof(*__first));
+_ForwardIt
+__uninitialized_relocate(_InputIt __first, _InputIt __last,
+                         _ForwardIt __result, _IsMemcpyable, _IsPointers)
+{
+    using _Dt = typename iterator_traits<_ForwardIt>::value_type;
+    for (; __first != __last; (void)++__result, ++__first) {
+        ::new (static_cast<void*>(_VSTD::addressof(*__result))) _Dt(_VSTD::move(*__first));
+        _VSTD::destroy_at(std::addressof(*__first));
     }
-    return __idx;
+    return __result;
 }
 
-template <class _InputIt, class _Size, class _ForwardIt>
+template<class _InputIt, class _ForwardIt>
+inline _LIBCPP_INLINE_VISIBILITY
+_ForwardIt
+__uninitialized_relocate(_InputIt __first, _InputIt __last,
+                         _ForwardIt __result, true_type, false_type)
+{
+    using _Dt = typename iterator_traits<_ForwardIt>::value_type;
+    for (; __first != __last; (void)++__result, ++__first) {
+        _VSTD::memmove(_VSTD::addressof(*__result), _VSTD::addressof(*__first), sizeof (_Dt));
+    }
+    return __result;
+}
+
+template<class _InputIt, class _ForwardIt>
+inline _LIBCPP_INLINE_VISIBILITY
+_ForwardIt
+__uninitialized_relocate(_InputIt __first, _InputIt __last,
+                         _ForwardIt __result, true_type, true_type)
+{
+    using _Dt = typename iterator_traits<_ForwardIt>::value_type;
+    auto __count = __last - __first;
+    if (__count != 0) {
+        _VSTD::memmove(_VSTD::addressof(*__result), _VSTD::addressof(*__first), __count * sizeof (_Dt));
+        __result += __count;
+    }
+    return __result;
+}
+
+template<class _InputIt, class _ForwardIt>
+inline _LIBCPP_INLINE_VISIBILITY
+_ForwardIt
+uninitialized_relocate(_InputIt __first, _InputIt __last,
+                       _ForwardIt __result)
+{
+    using _St = typename remove_reference<decltype(_VSTD::move(*__first))>::type;
+    using _Dt = typename remove_reference<typename iterator_traits<_ForwardIt>::value_type>::type;
+    return _VSTD::__uninitialized_relocate(__first, __last, __result,
+        integral_constant<bool,
+            !is_volatile<_St>::value && !is_volatile<_Dt>::value &&
+            __is_same_uncvref<_St, _Dt>::value &&
+            _VSTD::is_trivially_relocatable<_St>::value>(),
+        integral_constant<bool,
+            is_pointer<_InputIt>::value && is_pointer<_ForwardIt>::value>()
+    );
+}
+
+// uninitialized_relocate_n
+
+template<class _InputIt, class _Size, class _ForwardIt, class _IsMemcpyable, class _IsPointers>
 inline _LIBCPP_INLINE_VISIBILITY
 pair<_InputIt, _ForwardIt>
-uninitialized_relocate_n(_InputIt __first, _Size __n, _ForwardIt __first_res) {
-    using _Vt = typename iterator_traits<_ForwardIt>::value_type;
-    auto __idx = __first_res;
-    for (; __n > 0; ++__idx, (void)++__first, --__n) {
-        ::new((void*)_VSTD::addressof(*__idx)) _Vt(std::move(*__first));
-        _VSTD::destroy_at(_VSTD::addressof(*__first));
+__uninitialized_relocate_n(_InputIt __first, _Size __n,
+                         _ForwardIt __result, _IsMemcpyable, _IsPointers)
+{
+    using _Dt = typename iterator_traits<_ForwardIt>::value_type;
+    for (; __n > 0; ++__result, (void)++__first, --__n) {
+        ::new (static_cast<void*>(_VSTD::addressof(*__result))) _Dt(_VSTD::move(*__first));
+        _VSTD::destroy_at(std::addressof(*__first));
     }
-    return {__first, __idx};
+    return {__first, __result};
+}
+
+template<class _InputIt, class _Size, class _ForwardIt>
+inline _LIBCPP_INLINE_VISIBILITY
+pair<_InputIt, _ForwardIt>
+__uninitialized_relocate_n(_InputIt __first, _Size __n,
+                         _ForwardIt __result, true_type, false_type)
+{
+    using _Dt = typename iterator_traits<_ForwardIt>::value_type;
+    for (; __n > 0; ++__result, (void)++__first, --__n) {
+        _VSTD::memmove(_VSTD::addressof(*__result), _VSTD::addressof(*__first), sizeof (_Dt));
+    }
+    return {__first, __result};
+}
+
+template<class _InputIt, class _Size, class _ForwardIt>
+inline _LIBCPP_INLINE_VISIBILITY
+pair<_InputIt, _ForwardIt>
+__uninitialized_relocate_n(_InputIt __first, _Size __n,
+                         _ForwardIt __result, true_type, true_type)
+{
+    using _Dt = typename iterator_traits<_ForwardIt>::value_type;
+    if (__n != 0) {
+        _VSTD::memmove(_VSTD::addressof(*__result), _VSTD::addressof(*__first), __n * sizeof (_Dt));
+        __first += __n;
+        __result += __n;
+    }
+    return {__first, __result};
+}
+
+template<class _InputIt, class _Size, class _ForwardIt>
+inline _LIBCPP_INLINE_VISIBILITY
+pair<_InputIt, _ForwardIt>
+uninitialized_relocate_n(_InputIt __first, _Size __n, _ForwardIt __result)
+{
+    using _St = typename remove_reference<decltype(_VSTD::move(*__first))>::type;
+    using _Dt = typename remove_reference<typename iterator_traits<_ForwardIt>::value_type>::type;
+    return _VSTD::__uninitialized_relocate_n(__first, __n, __result,
+        integral_constant<bool,
+            !is_volatile<_St>::value && !is_volatile<_Dt>::value &&
+            __is_same_uncvref<_St, _Dt>::value &&
+            _VSTD::is_trivially_relocatable<_St>::value>(),
+        integral_constant<bool,
+            is_pointer<_InputIt>::value && is_pointer<_ForwardIt>::value>()
+    );
 }
 
 #endif // _LIBCPP_STD_VER > 14
