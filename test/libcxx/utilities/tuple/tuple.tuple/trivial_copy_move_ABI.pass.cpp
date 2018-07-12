@@ -9,10 +9,11 @@
 
 // The test fails due to the missing is_trivially_constructible intrinsic.
 // XFAIL: gcc-4.9
+// UNSUPPORTED: c++03
 
-// <utility>
+// <tuple>
 
-// template <class T1, class T2> struct pair
+// template <class... Ts> struct tuple
 
 // Test that we properly provide the trivial copy operations by default.
 
@@ -23,6 +24,7 @@
 #endif
 
 #include <utility>
+#include <tuple>
 #include <type_traits>
 #include <cstdlib>
 #include <cassert>
@@ -102,20 +104,20 @@ static_assert(std::is_trivially_relocatable<TrivialReloc>::value, "");
 int main()
 {
     {
-        typedef std::pair<int, short> P;
+        typedef std::tuple<int, int, short> P;
         static_assert(std::is_copy_constructible<P>::value, "");
         static_assert(HasTrivialABI<P>::value, "");
         static_assert(std::is_trivially_relocatable<P>::value, "");
     }
 #if TEST_STD_VER >= 11
     {
-        typedef std::pair<int, short> P;
+        typedef std::tuple<int, int, short> P;
         static_assert(std::is_move_constructible<P>::value, "");
         static_assert(HasTrivialABI<P>::value, "");
         static_assert(std::is_trivially_relocatable<P>::value, "");
     }
     {
-        using P = std::pair<NonTrivialDtor, int>;
+        using P = std::tuple<int, NonTrivialDtor, int>;
         static_assert(!std::is_trivially_destructible<P>::value, "");
         static_assert(std::is_copy_constructible<P>::value, "");
         static_assert(!std::is_trivially_copy_constructible<P>::value, "");
@@ -125,7 +127,7 @@ int main()
         static_assert(!std::is_trivially_relocatable<P>::value, "");
     }
     {
-        using P = std::pair<NonTrivialCopy, int>;
+        using P = std::tuple<int, NonTrivialCopy, int>;
         static_assert(std::is_copy_constructible<P>::value, "");
         static_assert(!std::is_trivially_copy_constructible<P>::value, "");
         static_assert(std::is_move_constructible<P>::value, "");
@@ -134,7 +136,7 @@ int main()
         static_assert(!std::is_trivially_relocatable<P>::value, "");
     }
     {
-        using P = std::pair<NonTrivialMove, int>;
+        using P = std::tuple<int, NonTrivialMove, int>;
         static_assert(std::is_copy_constructible<P>::value, "");
         static_assert(std::is_trivially_copy_constructible<P>::value, "");
         static_assert(std::is_move_constructible<P>::value, "");
@@ -143,7 +145,7 @@ int main()
         static_assert(!std::is_trivially_relocatable<P>::value, "");
     }
     {
-        using P = std::pair<DeletedCopy, int>;
+        using P = std::tuple<int, DeletedCopy, int>;
         static_assert(!std::is_copy_constructible<P>::value, "");
         static_assert(!std::is_trivially_copy_constructible<P>::value, "");
         static_assert(std::is_move_constructible<P>::value, "");
@@ -152,7 +154,7 @@ int main()
         static_assert(std::is_trivially_relocatable<P>::value, "");
     }
     {
-        using P = std::pair<Trivial, int>;
+        using P = std::tuple<int, Trivial, int>;
         static_assert(std::is_copy_constructible<P>::value, "");
         static_assert(std::is_trivially_copy_constructible<P>::value, "");
         static_assert(std::is_move_constructible<P>::value, "");
@@ -161,7 +163,7 @@ int main()
         static_assert(std::is_trivially_relocatable<P>::value, "");
     }
     {
-        using P = std::pair<TrivialMove, int>;
+        using P = std::tuple<int, TrivialMove, int>;
         static_assert(!std::is_copy_constructible<P>::value, "");
         static_assert(!std::is_trivially_copy_constructible<P>::value, "");
         static_assert(std::is_move_constructible<P>::value, "");
@@ -171,7 +173,7 @@ int main()
     }
 #if __has_extension(is_trivially_relocatable)
     {
-        using P = std::pair<TrivialReloc, int>;
+        using P = std::tuple<int, TrivialReloc, int>;
         static_assert(std::is_copy_constructible<P>::value, "");
         static_assert(!std::is_trivially_copy_constructible<P>::value, "");
         static_assert(std::is_move_constructible<P>::value, "");
@@ -180,7 +182,7 @@ int main()
         static_assert(std::is_trivially_relocatable<P>::value, "");
     }
     {
-        using P = std::pair<TrivialRelocEmpty, int>;
+        using P = std::tuple<int, TrivialRelocEmpty, int>;
         static_assert(std::is_copy_constructible<P>::value, "");
         static_assert(!std::is_trivially_copy_constructible<P>::value, "");
         static_assert(std::is_move_constructible<P>::value, "");
