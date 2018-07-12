@@ -1081,9 +1081,17 @@ equal(__bit_iterator<_Cp, _IC1> __first1, __bit_iterator<_Cp, _IC1> __last1, __b
     return __equal_unaligned(__first1, __last1, __first2);
 }
 
+template <class _Cp, bool _IsConst>
+struct __bit_iterator_is_trivially_relocatable {
+    typedef typename conditional<_IsConst, typename _Cp::__const_storage_pointer,
+                                           typename _Cp::__storage_pointer>::type  __storage_pointer;
+
+    typedef __libcpp_is_trivially_relocatable<__storage_pointer> type;
+};
+
 template <class _Cp, bool _IsConst,
           typename _Cp::__storage_type>
-class __bit_iterator
+class _LIBCPP_TRIVIALLY_RELOCATABLE_IF((__bit_iterator_is_trivially_relocatable<_Cp, _IsConst>::type::value)) __bit_iterator
 {
 public:
     typedef typename _Cp::difference_type                                                          difference_type;

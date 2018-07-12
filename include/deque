@@ -1028,6 +1028,14 @@ public:
       __deque_base * const __base_;
     };
 
+public:
+    typedef integral_constant<bool,
+        __libcpp_is_trivially_relocatable<pointer>::value &&
+        __libcpp_is_trivially_relocatable<__pointer_allocator>::value &&
+        __libcpp_is_trivially_relocatable<size_type>::value &&
+        __libcpp_is_trivially_relocatable<allocator_type>::value
+    > __allow_trivial_relocation;
+
 protected:
     __map __map_;
     size_type __start_;
@@ -1267,7 +1275,7 @@ __deque_base<_Tp, _Allocator>::clear() _NOEXCEPT
 }
 
 template <class _Tp, class _Allocator /*= allocator<_Tp>*/>
-class _LIBCPP_TEMPLATE_VIS deque
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_TRIVIALLY_RELOCATABLE_IF((__deque_base<_Tp, _Allocator>::__allow_trivial_relocation::value)) deque
     : private __deque_base<_Tp, _Allocator>
 {
 public:

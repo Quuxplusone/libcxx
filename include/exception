@@ -136,7 +136,7 @@ _LIBCPP_NORETURN _LIBCPP_FUNC_VIS void rethrow_exception(exception_ptr);
 
 #ifndef _LIBCPP_ABI_MICROSOFT
 
-class _LIBCPP_TYPE_VIS exception_ptr
+class _LIBCPP_TYPE_VIS _LIBCPP_TRIVIALLY_RELOCATABLE exception_ptr
 {
     void* __ptr_;
 public:

@@ -1076,7 +1076,7 @@ __make_async_assoc_state(_Fp __f);
 #endif
 
 template <class _Rp>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FUTURE future
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FUTURE _LIBCPP_TRIVIALLY_RELOCATABLE future
 {
     __assoc_state<_Rp>* __state_;
 
@@ -1176,7 +1176,7 @@ future<_Rp>::get()
 }
 
 template <class _Rp>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FUTURE future<_Rp&>
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FUTURE _LIBCPP_TRIVIALLY_RELOCATABLE future<_Rp&>
 {
     __assoc_state<_Rp&>* __state_;
 
@@ -1271,7 +1271,7 @@ future<_Rp&>::get()
 }
 
 template <>
-class _LIBCPP_TYPE_VIS _LIBCPP_AVAILABILITY_FUTURE future<void>
+class _LIBCPP_TYPE_VIS _LIBCPP_AVAILABILITY_FUTURE _LIBCPP_TRIVIALLY_RELOCATABLE future<void>
 {
     __assoc_sub_state* __state_;
 
@@ -1354,7 +1354,7 @@ swap(future<_Rp>& __x, future<_Rp>& __y) _NOEXCEPT
 template <class _Callable> class packaged_task;
 
 template <class _Rp>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FUTURE promise
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FUTURE _LIBCPP_TRIVIALLY_RELOCATABLE promise
 {
     __assoc_state<_Rp>* __state_;
 
@@ -1521,7 +1521,7 @@ promise<_Rp>::set_exception_at_thread_exit(exception_ptr __p)
 // promise<R&>
 
 template <class _Rp>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FUTURE promise<_Rp&>
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FUTURE _LIBCPP_TRIVIALLY_RELOCATABLE promise<_Rp&>
 {
     __assoc_state<_Rp&>* __state_;
 
@@ -1657,7 +1657,7 @@ promise<_Rp&>::set_exception_at_thread_exit(exception_ptr __p)
 // promise<void>
 
 template <>
-class _LIBCPP_TYPE_VIS _LIBCPP_AVAILABILITY_FUTURE promise<void>
+class _LIBCPP_TYPE_VIS _LIBCPP_AVAILABILITY_FUTURE _LIBCPP_TRIVIALLY_RELOCATABLE promise<void>
 {
     __assoc_sub_state* __state_;
 
@@ -2364,7 +2364,7 @@ async(_Fp&& __f, _Args&&... __args)
 // shared_future
 
 template <class _Rp>
-class _LIBCPP_TEMPLATE_VIS shared_future
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_TRIVIALLY_RELOCATABLE shared_future
 {
     __assoc_state<_Rp>* __state_;
 
@@ -2438,7 +2438,7 @@ shared_future<_Rp>::operator=(const shared_future& __rhs) _NOEXCEPT
 }
 
 template <class _Rp>
-class _LIBCPP_TEMPLATE_VIS shared_future<_Rp&>
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_TRIVIALLY_RELOCATABLE shared_future<_Rp&>
 {
     __assoc_state<_Rp&>* __state_;
 
@@ -2512,7 +2512,7 @@ shared_future<_Rp&>::operator=(const shared_future& __rhs)
 }
 
 template <>
-class _LIBCPP_TYPE_VIS _LIBCPP_AVAILABILITY_FUTURE shared_future<void>
+class _LIBCPP_TYPE_VIS _LIBCPP_AVAILABILITY_FUTURE _LIBCPP_TRIVIALLY_RELOCATABLE shared_future<void>
 {
     __assoc_sub_state* __state_;
 
