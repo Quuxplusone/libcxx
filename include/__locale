@@ -118,7 +118,7 @@ _LIBCPP_INLINE_VISIBILITY
 const _Facet&
 use_facet(const locale&);
 
-class _LIBCPP_TYPE_VIS locale
+class _LIBCPP_TYPE_VIS _LIBCPP_TRIVIALLY_RELOCATABLE locale
 {
 public:
     // types:

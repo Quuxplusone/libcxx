@@ -840,7 +840,9 @@ class unordered_multimap;
 
 template <class _Key, class _Tp, class _Hash = hash<_Key>, class _Pred = equal_to<_Key>,
           class _Alloc = allocator<pair<const _Key, _Tp> > >
-class _LIBCPP_TEMPLATE_VIS unordered_map
+class _LIBCPP_TEMPLATE_VIS
+      _LIBCPP_TRIVIALLY_RELOCATABLE_IF((__hash_table<pair<const _Key, _Tp>, _Hash, _Pred, _Alloc>::__allow_trivial_relocation::value))
+      unordered_map
 {
 public:
     // types
@@ -1740,7 +1742,9 @@ operator!=(const unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
 
 template <class _Key, class _Tp, class _Hash = hash<_Key>, class _Pred = equal_to<_Key>,
           class _Alloc = allocator<pair<const _Key, _Tp> > >
-class _LIBCPP_TEMPLATE_VIS unordered_multimap
+class _LIBCPP_TEMPLATE_VIS
+      _LIBCPP_TRIVIALLY_RELOCATABLE_IF((__hash_table<pair<const _Key, _Tp>, _Hash, _Pred, _Alloc>::__allow_trivial_relocation::value))
+      unordered_multimap
 {
 public:
     // types
