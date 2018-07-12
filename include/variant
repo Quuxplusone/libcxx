@@ -1107,7 +1107,7 @@ using __best_match_t = typename result_of_t<__overload<_Types...>(_Tp&&)>::type;
 } // __variant_detail
 
 template <class... _Types>
-class _LIBCPP_TEMPLATE_VIS variant
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_TRIVIALLY_RELOCATABLE_IF(__all<is_trivially_relocatable_v<_Types>...>::value) variant
     : private __sfinae_ctor_base<
           __all<is_copy_constructible_v<_Types>...>::value,
           __all<is_move_constructible_v<_Types>...>::value>,
