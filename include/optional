@@ -580,13 +580,25 @@ using __optional_sfinae_assign_base_t = __sfinae_assign_base<
     (is_move_constructible<_Tp>::value && is_move_assignable<_Tp>::value)
 >;
 
+template <class _Tp, bool = is_trivially_relocatable<_Tp>::value>
+struct __optional_relocate_base : __optional_move_assign_base<_Tp>
+{
+    using __optional_move_assign_base<_Tp>::__optional_move_assign_base;
+};
+
+template <class _Tp>
+struct _LIBCPP_TRIVIALLY_RELOCATABLE __optional_relocate_base<_Tp, true> : __optional_move_assign_base<_Tp>
+{
+    using __optional_move_assign_base<_Tp>::__optional_move_assign_base;
+};
+
 template <class _Tp>
 class optional
-    : private __optional_move_assign_base<_Tp>
+    : private __optional_relocate_base<_Tp>
     , private __optional_sfinae_ctor_base_t<_Tp>
     , private __optional_sfinae_assign_base_t<_Tp>
 {
-    using __base = __optional_move_assign_base<_Tp>;
+    using __base = __optional_relocate_base<_Tp>;
 public:
     using value_type = _Tp;
 
