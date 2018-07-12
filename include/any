@@ -116,7 +116,7 @@ void __throw_bad_any_cast()
 }
 
 // Forward declarations
-class _LIBCPP_TEMPLATE_VIS any;
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_TRIVIALLY_RELOCATABLE any;
 
 template <class _ValueType>
 _LIBCPP_INLINE_VISIBILITY
@@ -179,7 +179,7 @@ namespace __any_imp
 
 } // namespace __any_imp
 
-class _LIBCPP_TEMPLATE_VIS any
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_TRIVIALLY_RELOCATABLE any
 {
 public:
   // construct/destruct
