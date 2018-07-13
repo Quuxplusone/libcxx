@@ -591,8 +591,29 @@ protected:
 
 template<class _Tp, class _Allocator>
 struct __vector_copy_via_memcpy : integral_constant<bool,
-    (is_same<_Allocator, allocator<_Tp> >::value || !__has_construct<_Allocator, _Tp*, _Tp>::value) &&
-    is_trivially_move_constructible<_Tp>::value
+    is_trivially_move_constructible<_Tp>::value &&
+    __has_trivial_construct<_Allocator, _Tp,
+#ifndef _LIBCPP_CXX03_LANG
+        _Tp&&
+#else
+        const _Tp&
+#endif
+    >::value &&
+    !is_volatile<_Tp>::value
+> {};
+
+template<class _Tp, class _Allocator>
+struct __vector_relocate_via_memcpy : integral_constant<bool,
+    is_trivially_relocatable<_Tp>::value &&
+    __has_trivial_construct<_Allocator, _Tp,
+#ifndef _LIBCPP_CXX03_LANG
+        _Tp&&
+#else
+        const _Tp&
+#endif
+    >::value &&
+    __has_trivial_destroy<_Allocator, _Tp>::value &&
+    !is_volatile<_Tp>::value
 > {};
 
 template <class _Tp, class _Allocator /* = allocator<_Tp> */>
@@ -1078,13 +1099,21 @@ template <class _Tp, class _Allocator>
 void
 vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, allocator_type&>& __v)
 {
-    typedef typename __vector_copy_via_memcpy<_Tp, _Allocator>::type __copy_via_memcpy;
+    typedef integral_constant<bool,
+        __vector_copy_via_memcpy<_Tp, _Allocator>::value ||
+        __vector_relocate_via_memcpy<_Tp, _Allocator>::value
+    > __copy_via_memcpy;
+    typedef integral_constant<bool,
+        __vector_relocate_via_memcpy<_Tp, _Allocator>::value
+    > __destroy_via_noop;
+
     __annotate_delete();
     _VSTD::__move_construct_backward(this->__alloc(), this->__begin_, this->__end_, __v.__begin_, __copy_via_memcpy());
     _VSTD::swap(this->__begin_, __v.__begin_);
     _VSTD::swap(this->__end_, __v.__end_);
     _VSTD::swap(this->__end_cap(), __v.__end_cap());
     __v.__first_ = __v.__begin_;
+    __v.__destruct_at_end(__v.__begin_, __destroy_via_noop());
     __annotate_new(size());
     __invalidate_all_iterators();
 }
@@ -1093,7 +1122,14 @@ template <class _Tp, class _Allocator>
 typename vector<_Tp, _Allocator>::pointer
 vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, allocator_type&>& __v, pointer __p)
 {
-    typedef typename __vector_copy_via_memcpy<_Tp, _Allocator>::type __copy_via_memcpy;
+    typedef integral_constant<bool,
+        __vector_copy_via_memcpy<_Tp, _Allocator>::value ||
+        __vector_relocate_via_memcpy<_Tp, _Allocator>::value
+    > __copy_via_memcpy;
+    typedef integral_constant<bool,
+        __vector_relocate_via_memcpy<_Tp, _Allocator>::value
+    > __destroy_via_noop;
+
     __annotate_delete();
     pointer __r = __v.__begin_;
     _VSTD::__move_construct_backward(this->__alloc(), this->__begin_, __p, __v.__begin_, __copy_via_memcpy());
@@ -1102,6 +1138,7 @@ vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, a
     _VSTD::swap(this->__end_, __v.__end_);
     _VSTD::swap(this->__end_cap(), __v.__end_cap());
     __v.__first_ = __v.__begin_;
+    __v.__destruct_at_end(__v.__begin_, __destroy_via_noop());
     __annotate_new(size());
     __invalidate_all_iterators();
     return __r;
