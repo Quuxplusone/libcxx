@@ -460,6 +460,12 @@ __vector_base<_Tp, _Allocator>::~__vector_base()
     }
 }
 
+template<class _Tp, class _Allocator>
+struct __vector_copy_via_memcpy : integral_constant<bool,
+    (is_same<_Allocator, allocator<_Tp> >::value || !__has_construct<_Allocator, _Tp*, _Tp>::value) &&
+    is_trivially_move_constructible<_Tp>::value
+> {};
+
 template <class _Tp, class _Allocator /* = allocator<_Tp> */>
 class _LIBCPP_TEMPLATE_VIS vector
     : private __vector_base<_Tp, _Allocator>
@@ -467,6 +473,7 @@ class _LIBCPP_TEMPLATE_VIS vector
 private:
     typedef __vector_base<_Tp, _Allocator>           __base;
     typedef allocator<_Tp>                           __default_allocator_type;
+
 public:
     typedef vector                                   __self;
     typedef _Tp                                      value_type;
@@ -927,8 +934,9 @@ template <class _Tp, class _Allocator>
 void
 vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, allocator_type&>& __v)
 {
+    typedef typename __vector_copy_via_memcpy<_Tp, _Allocator>::type __copy_via_memcpy;
     __annotate_delete();
-    _VSTD::__construct_backward(this->__alloc(), this->__begin_, this->__end_, __v.__begin_);
+    _VSTD::__construct_backward(this->__alloc(), this->__begin_, this->__end_, __v.__begin_, __copy_via_memcpy());
     _VSTD::swap(this->__begin_, __v.__begin_);
     _VSTD::swap(this->__end_, __v.__end_);
     _VSTD::swap(this->__end_cap(), __v.__end_cap());
@@ -941,10 +949,11 @@ template <class _Tp, class _Allocator>
 typename vector<_Tp, _Allocator>::pointer
 vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, allocator_type&>& __v, pointer __p)
 {
+    typedef typename __vector_copy_via_memcpy<_Tp, _Allocator>::type __copy_via_memcpy;
     __annotate_delete();
     pointer __r = __v.__begin_;
-    _VSTD::__construct_backward(this->__alloc(), this->__begin_, __p, __v.__begin_);
-    _VSTD::__construct_forward(this->__alloc(), __p, this->__end_, __v.__end_);
+    _VSTD::__construct_backward(this->__alloc(), this->__begin_, __p, __v.__begin_, __copy_via_memcpy());
+    _VSTD::__construct_forward(this->__alloc(), __p, this->__end_, __v.__end_, __copy_via_memcpy());
     _VSTD::swap(this->__begin_, __v.__begin_);
     _VSTD::swap(this->__end_, __v.__end_);
     _VSTD::swap(this->__end_cap(), __v.__end_cap());
@@ -1058,9 +1067,10 @@ typename enable_if
 >::type
 vector<_Tp, _Allocator>::__construct_at_end(_ForwardIterator __first, _ForwardIterator __last, size_type __n)
 {
+    typedef typename __vector_copy_via_memcpy<_Tp, _Allocator>::type __copy_via_memcpy;
     allocator_type& __a = this->__alloc();
     __RAII_IncreaseAnnotator __annotator(*this, __n);
-    _VSTD::__construct_range_forward(__a, __first, __last, this->__end_);
+    _VSTD::__construct_range_forward(__a, __first, __last, this->__end_, __copy_via_memcpy());
     __annotator.__done();
 }
 

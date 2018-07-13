@@ -1671,35 +1671,31 @@ struct __rebind_alloc_helper
 template <class _Alloc, class _Ptr>
 _LIBCPP_INLINE_VISIBILITY
 inline void
-__construct_forward(_Alloc& __a, _Ptr __begin1, _Ptr __end1, _Ptr& __begin2)
+__construct_forward(_Alloc& __a, _Ptr __begin1, _Ptr __end1, _Ptr& __begin2, false_type)
 {
     using _Alloc_traits = allocator_traits<_Alloc>;
     for (; __begin1 != __end1; ++__begin1, ++__begin2)
         _Alloc_traits::construct(__a, _VSTD::__to_raw_pointer(__begin2), _VSTD::move_if_noexcept(*__begin1));
 }
 
-template <class _Alloc, class _Tp>
+template <class _Alloc, class _Ptr>
 _LIBCPP_INLINE_VISIBILITY
-inline typename enable_if<
-    (is_same<_Alloc, allocator<_Tp> >::value
-        || !__has_construct<_Alloc, _Tp*, _Tp>::value) &&
-     is_trivially_move_constructible<_Tp>::value,
-    void
->::type
-__construct_forward(_Alloc&, _Tp* __begin1, _Tp* __end1, _Tp*& __begin2)
+inline void
+__construct_forward(_Alloc&, _Ptr __begin1, _Ptr __end1, _Ptr& __begin2, true_type)
 {
+    typedef typename iterator_traits<_Ptr>::value_type _Tp;
     ptrdiff_t _Np = __end1 - __begin1;
     if (_Np > 0)
     {
-        _VSTD::memcpy(__begin2, __begin1, _Np * sizeof(_Tp));
+        _VSTD::memcpy(_VSTD::__to_raw_pointer(__begin2), _VSTD::__to_raw_pointer(__begin1), _Np * sizeof(_Tp));
         __begin2 += _Np;
     }
 }
 
-template <class _Alloc, class _Iter, class _Ptr>
+template <class _Alloc, class _Iter, class _Ptr, class _CopyViaMemcpy>
 _LIBCPP_INLINE_VISIBILITY
 inline void
-__construct_range_forward(_Alloc& __a, _Iter __begin1, _Iter __end1, _Ptr& __begin2)
+__construct_range_forward(_Alloc& __a, _Iter __begin1, _Iter __end1, _Ptr& __begin2, _CopyViaMemcpy)
 {
     using _Alloc_traits = allocator_traits<_Alloc>;
     for (; __begin1 != __end1; ++__begin1, (void)++__begin2)
@@ -1708,13 +1704,8 @@ __construct_range_forward(_Alloc& __a, _Iter __begin1, _Iter __end1, _Ptr& __beg
 
 template <class _Alloc, class _Tp>
 _LIBCPP_INLINE_VISIBILITY
-inline typename enable_if<
-    (is_same<_Alloc, allocator<_Tp> >::value
-        || !__has_construct<_Alloc, _Tp*, _Tp>::value) &&
-     is_trivially_move_constructible<_Tp>::value,
-    void
->::type
-__construct_range_forward(_Alloc&, _Tp* __begin1, _Tp* __end1, _Tp*& __begin2)
+inline void
+__construct_range_forward(_Alloc&, _Tp* __begin1, _Tp* __end1, _Tp*& __begin2, true_type)
 {
     typedef typename remove_const<_Tp>::type _Vp;
     ptrdiff_t _Np = __end1 - __begin1;
@@ -1728,7 +1719,7 @@ __construct_range_forward(_Alloc&, _Tp* __begin1, _Tp* __end1, _Tp*& __begin2)
 template <class _Alloc, class _Ptr>
 _LIBCPP_INLINE_VISIBILITY
 inline void
-__construct_backward(_Alloc& __a, _Ptr __begin1, _Ptr __end1, _Ptr& __end2)
+__construct_backward(_Alloc& __a, _Ptr __begin1, _Ptr __end1, _Ptr& __end2, false_type)
 {
     using _Alloc_traits = allocator_traits<_Alloc>;
     while (__end1 != __begin1)
@@ -1738,20 +1729,18 @@ __construct_backward(_Alloc& __a, _Ptr __begin1, _Ptr __end1, _Ptr& __end2)
     }
 }
 
-template <class _Alloc, class _Tp>
+template <class _Alloc, class _Ptr>
 _LIBCPP_INLINE_VISIBILITY
-inline typename enable_if<
-    (is_same<_Alloc, allocator<_Tp> >::value
-        || !__has_construct<_Alloc, _Tp*, _Tp>::value) &&
-     is_trivially_move_constructible<_Tp>::value,
-    void
->::type
-__construct_backward(_Alloc&, _Tp* __begin1, _Tp* __end1, _Tp*& __end2)
+inline void
+__construct_backward(_Alloc&, _Ptr __begin1, _Ptr __end1, _Ptr& __end2, true_type)
 {
+    typedef typename iterator_traits<_Ptr>::value_type _Tp;
     ptrdiff_t _Np = __end1 - __begin1;
-    __end2 -= _Np;
     if (_Np > 0)
-        _VSTD::memcpy(__end2, __begin1, _Np * sizeof(_Tp));
+    {
+        __end2 -= _Np;
+        _VSTD::memcpy(_VSTD::__to_raw_pointer(__end2), _VSTD::__to_raw_pointer(__begin1), _Np * sizeof(_Tp));
+    }
 }
 
 // allocator
