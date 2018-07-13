@@ -1611,28 +1611,23 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
         _LIBCPP_INLINE_VISIBILITY
         static
         void
-        __construct_forward(allocator_type& __a, _Ptr __begin1, _Ptr __end1, _Ptr& __begin2)
+        __construct_forward(allocator_type& __a, _Ptr __begin1, _Ptr __end1, _Ptr& __begin2, false_type)
         {
             for (; __begin1 != __end1; ++__begin1, (void) ++__begin2)
                 construct(__a, _VSTD::__to_raw_pointer(__begin2), _VSTD::move_if_noexcept(*__begin1));
         }
 
-    template <class _Tp>
+    template <class _Ptr>
         _LIBCPP_INLINE_VISIBILITY
         static
-        typename enable_if
-        <
-            (__is_default_allocator<allocator_type>::value
-                || !__has_construct<allocator_type, _Tp*, _Tp>::value) &&
-             is_trivially_move_constructible<_Tp>::value,
-            void
-        >::type
-        __construct_forward(allocator_type&, _Tp* __begin1, _Tp* __end1, _Tp*& __begin2)
+        void
+        __construct_forward(allocator_type&, _Ptr __begin1, _Ptr __end1, _Ptr& __begin2, true_type)
         {
+            typedef typename iterator_traits<_Ptr>::value_type _Tp;
+            typedef typename remove_const<_Tp>::type _Vp;
             ptrdiff_t _Np = __end1 - __begin1;
-            if (_Np > 0)
-            {
-                _VSTD::memcpy(__begin2, __begin1, _Np * sizeof(_Tp));
+            if (_Np > 0) {
+                _VSTD::memcpy(const_cast<_Vp*>(_VSTD::__to_raw_pointer(__begin2)), _VSTD::__to_raw_pointer(__begin1), _Np * sizeof(_Tp));
                 __begin2 += _Np;
             }
         }
@@ -1674,7 +1669,7 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
         _LIBCPP_INLINE_VISIBILITY
         static
         void
-        __construct_backward(allocator_type& __a, _Ptr __begin1, _Ptr __end1, _Ptr& __end2)
+        __construct_backward(allocator_type& __a, _Ptr __begin1, _Ptr __end1, _Ptr& __end2, false_type)
         {
             while (__end1 != __begin1)
             {
@@ -1683,22 +1678,19 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
             }
         }
 
-    template <class _Tp>
+    template <class _Ptr>
         _LIBCPP_INLINE_VISIBILITY
         static
-        typename enable_if
-        <
-            (__is_default_allocator<allocator_type>::value
-                || !__has_construct<allocator_type, _Tp*, _Tp>::value) &&
-             is_trivially_move_constructible<_Tp>::value,
-            void
-        >::type
-        __construct_backward(allocator_type&, _Tp* __begin1, _Tp* __end1, _Tp*& __end2)
+        void
+        __construct_backward(allocator_type&, _Ptr __begin1, _Ptr __end1, _Ptr& __end2, true_type)
         {
+            typedef typename iterator_traits<_Ptr>::value_type _Tp;
+            typedef typename remove_const<_Tp>::type _Vp;
             ptrdiff_t _Np = __end1 - __begin1;
             __end2 -= _Np;
-            if (_Np > 0)
-                _VSTD::memcpy(__end2, __begin1, _Np * sizeof(_Tp));
+            if (_Np > 0) {
+                _VSTD::memcpy(const_cast<_Vp*>(_VSTD::__to_raw_pointer(__end2)), _VSTD::__to_raw_pointer(__begin1), _Np * sizeof(_Tp));
+            }
         }
 
 private:
