@@ -142,7 +142,7 @@ namespace __any_imp
   enum class _Action {
     _Destroy,
     _Copy,
-    _Move,
+    _Relocate,
     _Get,
     _TypeInfo
   };
@@ -195,7 +195,7 @@ public:
   _LIBCPP_INLINE_VISIBILITY
   any(any && __other) _NOEXCEPT : __h(nullptr)
   {
-    if (__other.__h) __other.__call(_Action::_Move, this);
+    if (__other.__h) __other.__call(_Action::_Relocate, this);
   }
 
   template <
@@ -355,8 +355,8 @@ namespace __any_imp
         case _Action::_Copy:
             __copy(*__this, *__other);
             return nullptr;
-        case _Action::_Move:
-          __move(const_cast<any &>(*__this), *__other);
+        case _Action::_Relocate:
+          __relocate(const_cast<any &>(*__this), *__other, is_trivially_relocatable<_Tp>());
           return nullptr;
         case _Action::_Get:
             return __get(const_cast<any &>(*__this), __info, __fallback_info);
@@ -388,10 +388,21 @@ namespace __any_imp
     }
 
     _LIBCPP_INLINE_VISIBILITY
-    static void __move(any & __this, any & __dest) {
+    static void __relocate(any & __this, any & __dest, false_type) {
         _SmallHandler::__create(__dest, _VSTD::move(
             *static_cast<_Tp*>(static_cast<void*>(&__this.__s.__buf))));
         __destroy(__this);
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    static void __relocate(any & __this, any & __dest, true_type) {
+        _VSTD::memcpy(
+            static_cast<void*>(&__dest.__s.__buf),
+            static_cast<void*>(&__this.__s.__buf),
+            sizeof(__this.__s.__buf)
+        );
+        __dest.__h = &_SmallHandler::__handle;
+        __this.__h = nullptr;
     }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -431,8 +442,8 @@ namespace __any_imp
         case _Action::_Copy:
           __copy(*__this, *__other);
           return nullptr;
-        case _Action::_Move:
-          __move(const_cast<any &>(*__this), *__other);
+        case _Action::_Relocate:
+          __relocate(const_cast<any &>(*__this), *__other);
           return nullptr;
         case _Action::_Get:
             return __get(const_cast<any &>(*__this), __info, __fallback_info);
@@ -468,7 +479,7 @@ namespace __any_imp
     }
 
     _LIBCPP_INLINE_VISIBILITY
-    static void __move(any & __this, any & __dest) {
+    static void __relocate(any & __this, any & __dest) {
       __dest.__s.__ptr = __this.__s.__ptr;
       __dest.__h = &_LargeHandler::__handle;
       __this.__h = nullptr;
@@ -543,15 +554,15 @@ void any::swap(any & __rhs) _NOEXCEPT
       return;
     if (__h && __rhs.__h) {
         any __tmp;
-        __rhs.__call(_Action::_Move, &__tmp);
-        this->__call(_Action::_Move, &__rhs);
-        __tmp.__call(_Action::_Move, this);
+        __rhs.__call(_Action::_Relocate, &__tmp);
+        this->__call(_Action::_Relocate, &__rhs);
+        __tmp.__call(_Action::_Relocate, this);
     }
     else if (__h) {
-        this->__call(_Action::_Move, &__rhs);
+        this->__call(_Action::_Relocate, &__rhs);
     }
     else if (__rhs.__h) {
-        __rhs.__call(_Action::_Move, this);
+        __rhs.__call(_Action::_Relocate, this);
     }
 }
 
