@@ -296,6 +296,84 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+template <class _Alloc, class _Iter, class _Ptr, class _CopyViaMemcpy>
+_LIBCPP_INLINE_VISIBILITY
+inline void
+__copy_construct_forward(_Alloc& __a, _Iter __begin1, _Iter __end1,
+                         _Ptr& __begin2, _CopyViaMemcpy)
+{
+    using _Alloc_traits = allocator_traits<_Alloc>;
+    for (; __begin1 != __end1; ++__begin1, (void)++__begin2)
+        _Alloc_traits::construct(__a, _VSTD::__to_raw_pointer(__begin2), *__begin1);
+}
+
+template <class _Alloc, class _Iter, class _Ptr>
+_LIBCPP_INLINE_VISIBILITY
+inline void
+__copy_construct_forward(_Alloc&, _Iter __begin1, _Iter __end1,
+                         _Ptr& __begin2, true_type)
+{
+    typedef typename iterator_traits<_Iter>::value_type _Tp;
+    typedef typename remove_const<_Tp>::type _Vp;
+    ptrdiff_t _Np = __end1 - __begin1;
+    if (_Np > 0) {
+        _VSTD::memcpy(const_cast<_Vp*>(_VSTD::__to_raw_pointer(__begin2)), _VSTD::__to_raw_pointer(__begin1), _Np * sizeof(_Tp));
+        __begin2 += _Np;
+    }
+}
+
+template <class _Alloc, class _Ptr>
+_LIBCPP_INLINE_VISIBILITY
+inline void
+__move_construct_forward(_Alloc& __a, _Ptr __begin1, _Ptr __end1,
+                         _Ptr& __begin2, false_type)
+{
+    using _Alloc_traits = allocator_traits<_Alloc>;
+    for (; __begin1 != __end1; ++__begin1, ++__begin2)
+        _Alloc_traits::construct(__a, _VSTD::__to_raw_pointer(__begin2), _VSTD::move_if_noexcept(*__begin1));
+}
+
+template <class _Alloc, class _Ptr>
+_LIBCPP_INLINE_VISIBILITY
+inline void
+__move_construct_forward(_Alloc&, _Ptr __begin1, _Ptr __end1,
+                         _Ptr& __begin2, true_type)
+{
+    typedef typename iterator_traits<_Ptr>::value_type _Tp;
+    ptrdiff_t _Np = __end1 - __begin1;
+    if (_Np > 0) {
+        _VSTD::memcpy(_VSTD::__to_raw_pointer(__begin2), _VSTD::__to_raw_pointer(__begin1), _Np * sizeof(_Tp));
+        __begin2 += _Np;
+    }
+}
+
+template <class _Alloc, class _Ptr>
+_LIBCPP_INLINE_VISIBILITY
+inline void
+__move_construct_backward(_Alloc& __a, _Ptr __begin1, _Ptr __end1,
+                          _Ptr& __end2, false_type)
+{
+    using _Alloc_traits = allocator_traits<_Alloc>;
+    while (__end1 != __begin1) {
+        _Alloc_traits::construct(__a, _VSTD::__to_raw_pointer(__end2-1), _VSTD::move_if_noexcept(*--__end1));
+        --__end2;
+    }
+}
+
+template <class _Alloc, class _Ptr>
+_LIBCPP_INLINE_VISIBILITY
+inline void
+__move_construct_backward(_Alloc&, _Ptr __begin1, _Ptr __end1,
+                          _Ptr& __end2, true_type)
+{
+    typedef typename iterator_traits<_Ptr>::value_type _Tp;
+    ptrdiff_t _Np = __end1 - __begin1;
+    if (_Np > 0) {
+        __end2 -= _Np;
+        _VSTD::memcpy(_VSTD::__to_raw_pointer(__end2), _VSTD::__to_raw_pointer(__begin1), _Np * sizeof(_Tp));
+    }
+}
+
 template <bool>
 class __vector_base_common
 {
@@ -507,6 +585,12 @@ protected:
 #endif  // _LIBCPP_CXX03_LANG
 };
 
+template<class _Tp, class _Allocator>
+struct __vector_copy_via_memcpy : integral_constant<bool,
+    (is_same<_Allocator, allocator<_Tp> >::value || !__has_construct<_Allocator, _Tp*, _Tp>::value) &&
+    is_trivially_move_constructible<_Tp>::value
+> {};
+
 template <class _Tp, class _Allocator /* = allocator<_Tp> */>
 class _LIBCPP_TEMPLATE_VIS vector
     : private __vector_relocate_base<_Tp, _Allocator>
@@ -515,6 +599,7 @@ private:
     typedef __vector_base<_Tp, _Allocator>           __base;
     typedef __vector_relocate_base<_Tp, _Allocator>  __relocate_base;
     typedef allocator<_Tp>                           __default_allocator_type;
+
 public:
     typedef vector                                   __self;
     typedef _Tp                                      value_type;
@@ -985,8 +1070,9 @@ template <class _Tp, class _Allocator>
 void
 vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, allocator_type&>& __v)
 {
+    typedef typename __vector_copy_via_memcpy<_Tp, _Allocator>::type __copy_via_memcpy;
     __annotate_delete();
-    __alloc_traits::__construct_backward(this->__alloc(), this->__begin_, this->__end_, __v.__begin_);
+    _VSTD::__move_construct_backward(this->__alloc(), this->__begin_, this->__end_, __v.__begin_, __copy_via_memcpy());
     _VSTD::swap(this->__begin_, __v.__begin_);
     _VSTD::swap(this->__end_, __v.__end_);
     _VSTD::swap(this->__end_cap(), __v.__end_cap());
@@ -999,10 +1085,11 @@ template <class _Tp, class _Allocator>
 typename vector<_Tp, _Allocator>::pointer
 vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, allocator_type&>& __v, pointer __p)
 {
+    typedef typename __vector_copy_via_memcpy<_Tp, _Allocator>::type __copy_via_memcpy;
     __annotate_delete();
     pointer __r = __v.__begin_;
-    __alloc_traits::__construct_backward(this->__alloc(), this->__begin_, __p, __v.__begin_);
-    __alloc_traits::__construct_forward(this->__alloc(), __p, this->__end_, __v.__end_);
+    _VSTD::__move_construct_backward(this->__alloc(), this->__begin_, __p, __v.__begin_, __copy_via_memcpy());
+    _VSTD::__move_construct_forward(this->__alloc(), __p, this->__end_, __v.__end_, __copy_via_memcpy());
     _VSTD::swap(this->__begin_, __v.__begin_);
     _VSTD::swap(this->__end_, __v.__end_);
     _VSTD::swap(this->__end_cap(), __v.__end_cap());
@@ -1116,9 +1203,15 @@ typename enable_if
 >::type
 vector<_Tp, _Allocator>::__construct_at_end(_ForwardIterator __first, _ForwardIterator __last, size_type __n)
 {
+    typedef integral_constant<bool,
+        __vector_copy_via_memcpy<_Tp, _Allocator>::value &&
+        (is_same<_ForwardIterator, _Tp*>::value ||
+         is_same<_ForwardIterator, const _Tp*>::value ||
+         is_same<_ForwardIterator, pointer>::value)
+    > __copy_via_memcpy;
     allocator_type& __a = this->__alloc();
     __RAII_IncreaseAnnotator __annotator(*this, __n);
-    __alloc_traits::__construct_range_forward(__a, __first, __last, this->__end_);
+    _VSTD::__copy_construct_forward(__a, __first, __last, this->__end_, __copy_via_memcpy());
     __annotator.__done();
 }
 
