@@ -1516,6 +1516,8 @@ struct __is_default_allocator<_VSTD::allocator<_Tp> > : true_type {};
 template <class _Alloc>
 struct _LIBCPP_TEMPLATE_VIS allocator_traits
 {
+    typedef _Alloc __is_uncustomized;
+
     typedef _Alloc                              allocator_type;
     typedef typename allocator_type::value_type value_type;
 
@@ -5701,6 +5703,26 @@ struct __is_allocator<_Alloc,
        typename __void_t<decltype(_VSTD::declval<_Alloc&>().allocate(size_t(0)))>::type
      >
    : true_type {};
+
+// __has_trivial_construct, __has_trivial_destroy
+
+template <class _Alloc, class = _Alloc>
+struct __has_customized_allocator_traits : true_type {};
+
+template <class _Alloc>
+struct __has_customized_allocator_traits<_Alloc, typename allocator_traits<_Alloc>::__is_uncustomized> : false_type {};
+
+template <class _Alloc, class _Tp, class... _Args>
+struct __has_trivial_construct : integral_constant<bool,
+    !__has_construct<_Alloc, _Tp*, _Args...>::value &&
+    !__has_customized_allocator_traits<_Alloc>::value
+> {};
+
+template <class _Alloc, class _Tp>
+struct __has_trivial_destroy : integral_constant<bool,
+    !__has_destroy<_Alloc, _Tp*>::value &&
+    !__has_customized_allocator_traits<_Alloc>::value
+> {};
 
 _LIBCPP_END_NAMESPACE_STD
 
