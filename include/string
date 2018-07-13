@@ -666,8 +666,17 @@ struct __padding<_CharT, 1>
 
 #endif  // _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
 
+template<class _Allocator>
+struct __basic_string_is_trivially_relocatable {
+    typedef typename allocator_traits<_Allocator>::pointer pointer;
+    typedef integral_constant<bool,
+        is_trivially_relocatable<pointer>::value &&
+        is_trivially_relocatable<_Allocator>::value
+    > type;
+};
+
 template<class _CharT, class _Traits, class _Allocator>
-class _LIBCPP_TEMPLATE_VIS basic_string
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_TRIVIALLY_RELOCATABLE_IF(__basic_string_is_trivially_relocatable<_Allocator>::type::value) basic_string
     : private __basic_string_common<true>
 {
 public:

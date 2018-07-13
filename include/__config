@@ -1289,8 +1289,10 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 
 #if __has_extension(is_trivially_relocatable)
 #define _LIBCPP_TRIVIALLY_RELOCATABLE [[clang::trivially_relocatable]]
+#define _LIBCPP_TRIVIALLY_RELOCATABLE_IF(x) [[clang::trivially_relocatable(x)]]
 #else
 #define _LIBCPP_TRIVIALLY_RELOCATABLE
+#define _LIBCPP_TRIVIALLY_RELOCATABLE_IF(x)
 #endif
 
 #if !defined(__cpp_coroutines) || __cpp_coroutines < 201703L
