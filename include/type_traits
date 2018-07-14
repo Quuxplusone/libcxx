@@ -418,6 +418,7 @@ namespace std
 */
 #include <__config>
 #include <cstddef>
+#include <cstring>
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -430,6 +431,21 @@ template <class _T1, class _T2> struct _LIBCPP_TEMPLATE_VIS pair;
 template <class _Tp> class _LIBCPP_TEMPLATE_VIS reference_wrapper;
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS hash;
 
+
+#ifndef _LIBCPP_HAS_NO_BUILTIN_IS_CONSTANT_EVALUATED
+#if _LIBCPP_STD_VER > 17
+_LIBCPP_INLINE_VISIBILITY
+inline constexpr bool is_constant_evaluated() noexcept {
+  return __builtin_is_constant_evaluated();
+}
+#endif
+
+inline _LIBCPP_CONSTEXPR
+bool __libcpp_is_constant_evaluated() _NOEXCEPT { return __builtin_is_constant_evaluated(); }
+#else
+inline _LIBCPP_CONSTEXPR
+bool __libcpp_is_constant_evaluated() _NOEXCEPT { return false; }
+#endif
 
 template <class _Tp, _Tp __v>
 struct _LIBCPP_TEMPLATE_VIS integral_constant
@@ -3724,9 +3740,24 @@ _LIBCPP_CONSTEXPR_AFTER_CXX17
 swap(_Tp& __x, _Tp& __y) _NOEXCEPT_(is_nothrow_move_constructible<_Tp>::value &&
                                     is_nothrow_move_assignable<_Tp>::value)
 {
-    _Tp __t(_VSTD::move(__x));
-    __x = _VSTD::move(__y);
-    __y = _VSTD::move(__t);
+    if (__libcpp_is_trivially_relocatable<_Tp>::value && !is_volatile<_Tp>::value && !__libcpp_is_constant_evaluated()) {
+        if (!is_empty<_Tp>::value) {
+            // TODO: if either __x or __y is a "possibly overlapping subobject"
+            // in Itanium ABI terms, this will memcpy too much data. But the
+            // same caveat has applied to std::copy and friends, since forever.
+            char __t[sizeof (_Tp)];
+            // We cannot use __libcpp_relocate_at here, because the stack array
+            // is deliberately underaligned for an actual object of type _Tp.
+            // We are deliberately shuffling bytes here, not objects.
+            _VSTD::memcpy(__t, _VSTD::addressof(__x), sizeof(_Tp));
+            _VSTD::memcpy(_VSTD::addressof(__x), _VSTD::addressof(__y), sizeof(_Tp));
+            _VSTD::memcpy(_VSTD::addressof(__y), __t, sizeof(_Tp));
+        }
+    } else {
+        _Tp __t(_VSTD::move(__x));
+        __x = _VSTD::move(__y);
+        __y = _VSTD::move(__t);
+    }
 }
 
 template<class _Tp, size_t _Np>
@@ -4026,21 +4057,6 @@ template <class _ValTy, class _Key, class _RawValTy>
 struct __can_extract_map_key<_ValTy, _Key, _Key, _RawValTy>
     : false_type {};
 
-#endif
-
-#ifndef _LIBCPP_HAS_NO_BUILTIN_IS_CONSTANT_EVALUATED
-#if _LIBCPP_STD_VER > 17
-_LIBCPP_INLINE_VISIBILITY
-inline constexpr bool is_constant_evaluated() noexcept {
-  return __builtin_is_constant_evaluated();
-}
-#endif
-
-inline _LIBCPP_CONSTEXPR
-bool __libcpp_is_constant_evaluated() _NOEXCEPT { return __builtin_is_constant_evaluated(); }
-#else
-inline _LIBCPP_CONSTEXPR
-bool __libcpp_is_constant_evaluated() _NOEXCEPT { return false; }
 #endif
 
 template <class _CharT>
