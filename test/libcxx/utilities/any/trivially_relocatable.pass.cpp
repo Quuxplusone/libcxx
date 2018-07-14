@@ -13,7 +13,7 @@
 
 #include <any>
 
-#if __has_extension(is_trivially_relocatable)
+#if __has_extension(trivially_relocatable)
 
 class _LIBCPP_TRIVIALLY_RELOCATABLE Reloc { ~Reloc(); };
 
