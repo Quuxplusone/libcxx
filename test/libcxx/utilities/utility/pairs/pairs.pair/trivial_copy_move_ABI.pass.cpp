@@ -85,7 +85,7 @@ struct _LIBCPP_TRIVIALLY_RELOCATABLE TrivialRelocEmpty {
     TrivialRelocEmpty(TrivialRelocEmpty&&);
     ~TrivialRelocEmpty();
 };
-#if __has_extension(is_trivially_relocatable)
+#if __has_extension(trivially_relocatable)
 static_assert(std::is_trivially_relocatable<TrivialRelocEmpty>::value, "");
 #endif
 
@@ -95,7 +95,7 @@ struct _LIBCPP_TRIVIALLY_RELOCATABLE TrivialReloc {
     TrivialReloc(TrivialReloc&&);
     ~TrivialReloc();
 };
-#if __has_extension(is_trivially_relocatable)
+#if __has_extension(trivially_relocatable)
 static_assert(std::is_trivially_relocatable<TrivialReloc>::value, "");
 #endif
 
@@ -169,7 +169,7 @@ void test_trivial()
         static_assert(HasTrivialABI<P>::value, "");
         static_assert(std::is_trivially_relocatable<P>::value, "");
     }
-#if __has_extension(is_trivially_relocatable)
+#if __has_extension(trivially_relocatable)
     {
         using P = std::pair<TrivialReloc, int>;
         static_assert(std::is_copy_constructible<P>::value, "");

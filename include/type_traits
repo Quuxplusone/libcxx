@@ -3786,7 +3786,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_trivially_destructible_v
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_trivially_relocatable
     : public integral_constant<bool,
-#if __has_extension(is_trivially_relocatable)
+#if __has_extension(trivially_relocatable)
     __is_trivially_relocatable(_Tp)
 #else
     is_trivially_move_constructible<_Tp>::value &&
