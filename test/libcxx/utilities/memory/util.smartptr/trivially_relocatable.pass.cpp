@@ -22,11 +22,11 @@ class _LIBCPP_TRIVIALLY_RELOCATABLE Reloc { ~Reloc(); };
 
 static_assert(std::is_trivially_relocatable<int>::value, "");
 static_assert(!std::is_trivially_relocatable<NonTriv>::value, "");
-#if __has_extension(is_trivially_relocatable)
+#if __has_extension(trivially_relocatable)
 static_assert(std::is_trivially_relocatable<Reloc>::value, "");
 #endif
 
-#if __has_extension(is_trivially_relocatable)
+#if __has_extension(trivially_relocatable)
 static_assert(std::is_trivially_relocatable< std::shared_ptr<int> >::value, "");
 static_assert(std::is_trivially_relocatable< std::shared_ptr<Incomplete> >::value, "");
 static_assert(std::is_trivially_relocatable< std::shared_ptr<NonTriv> >::value, "");

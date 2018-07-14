@@ -124,7 +124,7 @@ void check_trivial_relocatability()
 #if _LIBCPP_DEBUG_LEVEL >= 2
     // Debugging adds significant operations to vector's move-constructor and destructor.
     static_assert(std::is_trivially_relocatable< VT >::value == false, "");
-#elif !__has_extension(is_trivially_relocatable)
+#elif !__has_extension(trivially_relocatable)
     // Making vector trivially relocatable requires using the attribute.
     static_assert(std::is_trivially_relocatable< VT >::value == false, "");
 #else
