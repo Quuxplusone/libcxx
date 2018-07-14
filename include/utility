@@ -262,7 +262,36 @@ swap_ranges(_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardItera
     return __first2;
 }
 
-// forward declared in <type_traits>
+// swap, forward-declared in <type_traits>
+
+#ifndef _LIBCPP_CXX03_LANG
+
+template <class _Tp>
+inline _LIBCPP_INLINE_VISIBILITY
+typename enable_if<
+    is_move_constructible<_Tp>::value &&
+    is_move_assignable<_Tp>::value
+>::type
+swap(_Tp& __x, _Tp& __y) _NOEXCEPT_(is_nothrow_move_constructible<_Tp>::value &&
+                                    is_nothrow_move_assignable<_Tp>::value)
+{
+    if (is_trivially_relocatable<_Tp>::value && !is_volatile<_Tp>::value) {
+        if (!is_empty<_Tp>::value) {
+            // TODO: if either __x or __y is a "possibly overlapping subobject"
+            // in Itanium ABI terms, this will memcpy too much data. But the
+            // same caveat has applied to std::copy and friends, since forever.
+            char __t[sizeof (_Tp)];
+            _VSTD::memcpy(__t, _VSTD::addressof(__x), sizeof(_Tp));
+            _VSTD::memcpy(_VSTD::addressof(__x), _VSTD::addressof(__y), sizeof(_Tp));
+            _VSTD::memcpy(_VSTD::addressof(__y), __t, sizeof(_Tp));
+        }
+    } else {
+        _Tp __t(_VSTD::move(__x));
+        __x = _VSTD::move(__y);
+        __y = _VSTD::move(__t);
+    }
+}
+
 template<class _Tp, size_t _Np>
 inline _LIBCPP_INLINE_VISIBILITY
 typename enable_if<
@@ -271,6 +300,42 @@ typename enable_if<
 swap(_Tp (&__a)[_Np], _Tp (&__b)[_Np]) _NOEXCEPT_(__is_nothrow_swappable<_Tp>::value)
 {
     _VSTD::swap_ranges(__a, __a + _Np, __b);
+}
+
+#else
+
+template <class _Tp>
+inline _LIBCPP_INLINE_VISIBILITY
+void
+swap(_Tp& __x, _Tp& __y) _NOEXCEPT_(is_nothrow_move_constructible<_Tp>::value &&
+                                    is_nothrow_move_assignable<_Tp>::value)
+{
+    _Tp __t(_VSTD::move(__x));
+    __x = _VSTD::move(__y);
+    __y = _VSTD::move(__t);
+}
+
+template<class _Tp, size_t _Np>
+inline _LIBCPP_INLINE_VISIBILITY
+typename enable_if<
+    __is_swappable<_Tp>::value
+>::type
+swap(_Tp (&__a)[_Np], _Tp (&__b)[_Np]) _NOEXCEPT_(__is_nothrow_swappable<_Tp>::value)
+{
+    _VSTD::swap_ranges(__a, __a + _Np, __b);
+}
+
+#endif  // _LIBCPP_CXX03_LANG
+
+template <class _ForwardIterator1, class _ForwardIterator2>
+inline _LIBCPP_INLINE_VISIBILITY
+void
+iter_swap(_ForwardIterator1 __a, _ForwardIterator2 __b)
+    //                                  _NOEXCEPT_(_NOEXCEPT_(swap(*__a, *__b)))
+               _NOEXCEPT_(_NOEXCEPT_(swap(*_VSTD::declval<_ForwardIterator1>(),
+                                          *_VSTD::declval<_ForwardIterator2>())))
+{
+    swap(*__a, *__b);
 }
 
 template <class _Tp>
