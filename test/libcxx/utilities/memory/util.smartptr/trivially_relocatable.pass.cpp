@@ -12,6 +12,7 @@
 // <memory>
 //
 // class shared_ptr
+// class unique_ptr
 // class weak_ptr
 
 #include <memory>
@@ -34,6 +35,16 @@ static_assert(std::is_trivially_relocatable< std::shared_ptr<NonTriv> >::value, 
 static_assert(std::is_trivially_relocatable< std::weak_ptr<int> >::value, "");
 static_assert(std::is_trivially_relocatable< std::weak_ptr<Incomplete> >::value, "");
 static_assert(std::is_trivially_relocatable< std::weak_ptr<NonTriv> >::value, "");
+
+static_assert(std::is_trivially_relocatable< std::default_delete<int> >::value, "");
+static_assert(std::is_trivially_relocatable< std::unique_ptr<int> >::value, "");
+static_assert(std::is_trivially_relocatable< std::unique_ptr<Incomplete> >::value, "");
+static_assert(std::is_trivially_relocatable< std::unique_ptr<NonTriv> >::value, "");
+
+static_assert(std::is_trivially_relocatable< std::default_delete<int[]> >::value, "");
+static_assert(std::is_trivially_relocatable< std::unique_ptr<int[]> >::value, "");
+static_assert(std::is_trivially_relocatable< std::unique_ptr<Incomplete[]> >::value, "");
+static_assert(std::is_trivially_relocatable< std::unique_ptr<NonTriv[]> >::value, "");
 #endif
 
 int main() {}
