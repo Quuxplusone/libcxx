@@ -537,7 +537,7 @@ private:
         {}
 
 public:
-    typedef is_trivially_relocatable<__compressed_pair<pointer, allocator_type>> __allow_trivial_relocation;
+    typedef is_trivially_relocatable<__compressed_pair<pointer, allocator_type> > __allow_trivial_relocation;
 };
 
 template <class _Tp, class _Allocator>

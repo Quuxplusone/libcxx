@@ -2319,6 +2319,7 @@ protected:
 
   __compressed_pair<pointer, deleter_type> __ptr_;
 
+#ifndef _LIBCPP_CXX03_LANG
   template<class... _Args>
   explicit constexpr __unique_ptr_storage_base(_Args&&... __args) : __ptr_(std::forward<_Args>(__args)...) {}
 
@@ -2328,6 +2329,11 @@ protected:
   {
     __u.__ptr_.first() = pointer();
   }
+#else
+  __unique_ptr_storage_base() {}
+  explicit __unique_ptr_storage_base(pointer __p) : __ptr_(__p) {}
+  explicit __unique_ptr_storage_base(pointer __p, deleter_type __d) : __ptr_(__p, _VSTD::move(__d)) {}
+#endif // !defined(_LIBCPP_CXX03_LANG)
 
   _LIBCPP_INLINE_VISIBILITY
   ~__unique_ptr_storage_base() {
@@ -2338,21 +2344,47 @@ protected:
   }
 
 public:
-  typedef is_trivially_relocatable<__compressed_pair<pointer, deleter_type>> __allow_trivial_relocation;
+  typedef is_trivially_relocatable<__compressed_pair<pointer, deleter_type> > __allow_trivial_relocation;
 };
 
 template <class _Tp, class _Dp, bool = __unique_ptr_storage_base<_Tp, _Dp>::__allow_trivial_relocation::value>
 class _LIBCPP_TEMPLATE_VIS __unique_ptr_relocate_base
   : protected __unique_ptr_storage_base<_Tp, _Dp>
 {
+#ifndef _LIBCPP_CXX03_LANG
     using __unique_ptr_storage_base<_Tp, _Dp>::__unique_ptr_storage_base;
+#else
+  typedef _Tp element_type;
+  typedef _Dp deleter_type;
+  typedef typename __pointer_type<_Tp, deleter_type>::type pointer;
+
+public:
+  __unique_ptr_relocate_base() {}
+  explicit __unique_ptr_relocate_base(pointer __p)
+    : __unique_ptr_storage_base<_Tp, _Dp>(__p) {}
+  explicit __unique_ptr_relocate_base(pointer __p, deleter_type __d)
+    : __unique_ptr_storage_base<_Tp, _Dp>(__p, _VSTD::move(__d)) {}
+#endif // !defined(_LIBCPP_CXX03_LANG)
 };
 
 template <class _Tp, class _Dp>
 class _LIBCPP_TEMPLATE_VIS _LIBCPP_TRIVIALLY_RELOCATABLE __unique_ptr_relocate_base<_Tp, _Dp, true>
   : protected __unique_ptr_storage_base<_Tp, _Dp>
 {
-    using __unique_ptr_storage_base<_Tp, _Dp>::__unique_ptr_storage_base;
+#ifndef _LIBCPP_CXX03_LANG
+  using __unique_ptr_storage_base<_Tp, _Dp>::__unique_ptr_storage_base;
+#else
+  typedef _Tp element_type;
+  typedef _Dp deleter_type;
+  typedef typename __pointer_type<_Tp, deleter_type>::type pointer;
+
+public:
+  __unique_ptr_relocate_base() {}
+  explicit __unique_ptr_relocate_base(pointer __p)
+    : __unique_ptr_storage_base<_Tp, _Dp>(__p) {}
+  explicit __unique_ptr_relocate_base(pointer __p, deleter_type __d)
+    : __unique_ptr_storage_base<_Tp, _Dp>(__p, _VSTD::move(__d)) {}
+#endif // !defined(_LIBCPP_CXX03_LANG)
 };
 
 template <class _Tp, class _Dp = default_delete<_Tp> >
@@ -5771,7 +5803,7 @@ template <class _Alloc>
 struct __is_exactly_std_allocator : false_type {};
 
 template <class _Tp>
-struct __is_exactly_std_allocator<allocator<_Tp>> : true_type {};
+struct __is_exactly_std_allocator<allocator<_Tp> > : true_type {};
 
 template <class _Alloc, class _Tp, class... _Args>
 struct __has_trivial_construct : integral_constant<bool,
