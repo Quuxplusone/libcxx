@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03
+
 // <string>
 //   ... manipulating sequences of any non-array trivial standard-layout types.
 
