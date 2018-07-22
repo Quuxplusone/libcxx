@@ -1287,7 +1287,7 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #define _LIBCPP_HAS_NO_IS_AGGREGATE
 #endif
 
-#define _LIBCPP_TRIVIALLY_RELOCATABLE_VERSION 5
+#define _LIBCPP_TRIVIALLY_RELOCATABLE_VERSION 7
 #ifndef _LIBCPP_TRIVIALLY_RELOCATABLE
 #if __has_extension(trivially_relocatable)
 #define _LIBCPP_TRIVIALLY_RELOCATABLE [[clang::trivially_relocatable]]
