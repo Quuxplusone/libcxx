@@ -89,7 +89,7 @@ struct __libcpp_locale_guard {
 #endif
 
 
-class _LIBCPP_TYPE_VIS locale;
+class _LIBCPP_TYPE_VIS _LIBCPP_TRIVIALLY_RELOCATABLE locale;
 
 template <class _Facet>
 _LIBCPP_INLINE_VISIBILITY
@@ -101,7 +101,7 @@ _LIBCPP_INLINE_VISIBILITY
 const _Facet&
 use_facet(const locale&);
 
-class _LIBCPP_TYPE_VIS locale
+class _LIBCPP_TYPE_VIS _LIBCPP_TRIVIALLY_RELOCATABLE locale
 {
 public:
     // types:

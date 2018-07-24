@@ -200,7 +200,7 @@ __thread_specific_ptr<_Tp>::set_pointer(pointer __p)
     __libcpp_tls_set(__key_, __p);
 }
 
-class _LIBCPP_TYPE_VIS thread;
+class _LIBCPP_TYPE_VIS _LIBCPP_TRIVIALLY_RELOCATABLE thread;
 class _LIBCPP_TYPE_VIS __thread_id;
 
 namespace this_thread
@@ -281,7 +281,7 @@ get_id() _NOEXCEPT
 
 }  // this_thread
 
-class _LIBCPP_TYPE_VIS thread
+class _LIBCPP_TYPE_VIS _LIBCPP_TRIVIALLY_RELOCATABLE thread
 {
     __libcpp_thread_t __t_;
 
