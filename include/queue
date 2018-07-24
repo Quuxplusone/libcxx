@@ -231,24 +231,6 @@ public:
         : c() {}
 
     _LIBCPP_INLINE_VISIBILITY
-    queue(const queue& __q) : c(__q.c) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    queue& operator=(const queue& __q) {c = __q.c; return *this;}
-
-#ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY
-    queue(queue&& __q)
-        _NOEXCEPT_(is_nothrow_move_constructible<container_type>::value)
-        : c(_VSTD::move(__q.c)) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    queue& operator=(queue&& __q)
-        _NOEXCEPT_(is_nothrow_move_assignable<container_type>::value)
-        {c = _VSTD::move(__q.c); return *this;}
-#endif  // _LIBCPP_CXX03_LANG
-
-    _LIBCPP_INLINE_VISIBILITY
     explicit queue(const container_type& __c)  : c(__c) {}
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
@@ -446,27 +428,6 @@ public:
         _NOEXCEPT_(is_nothrow_default_constructible<container_type>::value &&
                    is_nothrow_default_constructible<value_compare>::value)
         : c(), comp() {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    priority_queue(const priority_queue& __q) : c(__q.c), comp(__q.comp) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    priority_queue& operator=(const priority_queue& __q)
-        {c = __q.c; comp = __q.comp; return *this;}
-
-#ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY
-    priority_queue(priority_queue&& __q)
-        _NOEXCEPT_(is_nothrow_move_constructible<container_type>::value &&
-                   is_nothrow_move_constructible<value_compare>::value)
-        : c(_VSTD::move(__q.c)), comp(_VSTD::move(__q.comp)) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    priority_queue& operator=(priority_queue&& __q)
-        _NOEXCEPT_(is_nothrow_move_assignable<container_type>::value &&
-                   is_nothrow_move_assignable<value_compare>::value)
-        {c = _VSTD::move(__q.c); comp = _VSTD::move(__q.comp); return *this;}
-#endif  // _LIBCPP_CXX03_LANG
 
     _LIBCPP_INLINE_VISIBILITY
     explicit priority_queue(const value_compare& __comp)
