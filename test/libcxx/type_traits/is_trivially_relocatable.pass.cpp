@@ -22,6 +22,7 @@
 #include <deque>
 #include <forward_list>
 #include <functional>
+#include <future>
 #include <initializer_list>
 #include <ios>
 #include <iterator>
@@ -89,10 +90,9 @@ static_assert(std::is_trivially_relocatable<std::error_code>::value, "");
 static_assert(std::is_trivially_relocatable<std::error_condition>::value, "");
 static_assert(std::is_trivially_relocatable<std::errc>::value, "");
 static_assert(std::is_trivially_relocatable<std::type_index>::value, "");
-static_assert(!std::is_trivially_relocatable<std::function<void()>>::value, "");  // contains pointer into self
 static_assert(std::is_trivially_relocatable<std::array<R, 5>>::value, "");
 static_assert(!std::is_trivially_relocatable<std::array<T, 5>>::value, "");
-//static_assert(std::is_trivially_relocatable<std::deque<T>>::value, "");
+static_assert(std::is_trivially_relocatable<std::deque<T>>::value, "");
 //static_assert(std::is_trivially_relocatable<std::forward_list<T>>::value, "");
 //static_assert(std::is_trivially_relocatable<std::list<T>>::value, "");
 //static_assert(std::is_trivially_relocatable<std::map<T,T>>::value, "");
@@ -100,10 +100,10 @@ static_assert(!std::is_trivially_relocatable<std::array<T, 5>>::value, "");
 //static_assert(std::is_trivially_relocatable<std::multiset<T>>::value, "");
 //static_assert(std::is_trivially_relocatable<std::set<T>>::value, "");
 static_assert(std::is_trivially_relocatable<std::vector<T>>::value, "");
-//static_assert(std::is_trivially_relocatable<std::stack<T>>::value, "");
-//static_assert(std::is_trivially_relocatable<std::queue<T>>::value, "");
+static_assert(std::is_trivially_relocatable<std::stack<T>>::value, "");
+static_assert(std::is_trivially_relocatable<std::queue<T>>::value, "");
 static_assert(std::is_trivially_relocatable<std::priority_queue<T>>::value, "");
-//static_assert(std::is_trivially_relocatable<std::pmr::deque<T>>::value, "");
+static_assert(std::is_trivially_relocatable<std::pmr::deque<T>>::value, "");
 //static_assert(std::is_trivially_relocatable<std::pmr::forward_list<T>>::value, "");
 //static_assert(std::is_trivially_relocatable<std::pmr::list<T>>::value, "");
 //static_assert(std::is_trivially_relocatable<std::pmr::map<T,T>>::value, "");
@@ -156,6 +156,19 @@ static_assert(std::is_trivially_relocatable<std::unique_lock<std::mutex>>::value
 static_assert(std::is_trivially_relocatable<std::shared_lock<SM>>::value, "");
 static_assert(std::is_trivially_relocatable<std::thread>::value, "");
 static_assert(std::is_trivially_relocatable<std::thread::id>::value, "");
+//static_assert(std::is_trivially_relocatable<std::promise<T>>::value, "");
+//static_assert(std::is_trivially_relocatable<std::promise<T&>>::value, "");
+//static_assert(std::is_trivially_relocatable<std::promise<void>>::value, "");
+//static_assert(std::is_trivially_relocatable<std::future<T>>::value, "");
+//static_assert(std::is_trivially_relocatable<std::future<T&>>::value, "");
+//static_assert(std::is_trivially_relocatable<std::future<void>>::value, "");
+//static_assert(std::is_trivially_relocatable<std::shared_future<T>>::value, "");
+//static_assert(std::is_trivially_relocatable<std::shared_future<T&>>::value, "");
+//static_assert(std::is_trivially_relocatable<std::shared_future<void>>::value, "");
+static_assert(!std::is_trivially_relocatable<std::function<void()>>::value, "");  // contains pointer into self
+static_assert(!std::is_trivially_relocatable<std::packaged_task<T(T)>>::value, "");  // contains pointer into self
+static_assert(!std::is_trivially_relocatable<std::packaged_task<T&(T)>>::value, "");  // contains pointer into self
+static_assert(!std::is_trivially_relocatable<std::packaged_task<void(T)>>::value, "");  // contains pointer into self
 
 static_assert(!std::is_relocatable<std::atomic<int>>::value, "");
 static_assert(!std::is_relocatable<std::atomic_flag>::value, "");
