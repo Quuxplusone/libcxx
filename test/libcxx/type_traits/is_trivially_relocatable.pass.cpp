@@ -156,15 +156,15 @@ static_assert(std::is_trivially_relocatable<std::unique_lock<std::mutex>>::value
 static_assert(std::is_trivially_relocatable<std::shared_lock<SM>>::value, "");
 static_assert(std::is_trivially_relocatable<std::thread>::value, "");
 static_assert(std::is_trivially_relocatable<std::thread::id>::value, "");
-//static_assert(std::is_trivially_relocatable<std::promise<T>>::value, "");
-//static_assert(std::is_trivially_relocatable<std::promise<T&>>::value, "");
-//static_assert(std::is_trivially_relocatable<std::promise<void>>::value, "");
-//static_assert(std::is_trivially_relocatable<std::future<T>>::value, "");
-//static_assert(std::is_trivially_relocatable<std::future<T&>>::value, "");
-//static_assert(std::is_trivially_relocatable<std::future<void>>::value, "");
-//static_assert(std::is_trivially_relocatable<std::shared_future<T>>::value, "");
-//static_assert(std::is_trivially_relocatable<std::shared_future<T&>>::value, "");
-//static_assert(std::is_trivially_relocatable<std::shared_future<void>>::value, "");
+static_assert(std::is_trivially_relocatable<std::promise<T>>::value, "");
+static_assert(std::is_trivially_relocatable<std::promise<T&>>::value, "");
+static_assert(std::is_trivially_relocatable<std::promise<void>>::value, "");
+static_assert(std::is_trivially_relocatable<std::future<T>>::value, "");
+static_assert(std::is_trivially_relocatable<std::future<T&>>::value, "");
+static_assert(std::is_trivially_relocatable<std::future<void>>::value, "");
+static_assert(std::is_trivially_relocatable<std::shared_future<T>>::value, "");
+static_assert(std::is_trivially_relocatable<std::shared_future<T&>>::value, "");
+static_assert(std::is_trivially_relocatable<std::shared_future<void>>::value, "");
 static_assert(!std::is_trivially_relocatable<std::function<void()>>::value, "");  // contains pointer into self
 static_assert(!std::is_trivially_relocatable<std::packaged_task<T(T)>>::value, "");  // contains pointer into self
 static_assert(!std::is_trivially_relocatable<std::packaged_task<T&(T)>>::value, "");  // contains pointer into self
