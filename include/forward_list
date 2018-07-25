@@ -558,6 +558,9 @@ private:
     void __move_assign_alloc(__forward_list_base& __x, true_type)
         _NOEXCEPT_(is_nothrow_move_assignable<__node_allocator>::value)
         {__alloc() = _VSTD::move(__x.__alloc());}
+
+public:
+    typedef is_trivially_relocatable<__compressed_pair<__begin_node, __node_allocator> > __allow_trivial_relocation;
 };
 
 #ifndef _LIBCPP_CXX03_LANG
@@ -624,10 +627,45 @@ __forward_list_base<_Tp, _Alloc>::clear() _NOEXCEPT
     __before_begin()->__next_ = nullptr;
 }
 
+template <class _Tp, class _Alloc, bool = __forward_list_base<_Tp, _Alloc>::__allow_trivial_relocation::value>
+class _LIBCPP_TEMPLATE_VIS __forward_list_relocate_base
+    : protected __forward_list_base<_Tp, _Alloc>
+{
+protected:
+#ifndef _LIBCPP_CXX03_LANG
+    using __forward_list_base<_Tp, _Alloc>::__forward_list_base;
+#else
+    _LIBCPP_INLINE_VISIBILITY
+    __forward_list_relocate_base() = default;
+
+    _LIBCPP_INLINE_VISIBILITY
+    __forward_list_relocate_base(const _Alloc& __a)
+        : __forward_list_base<_Tp, _Alloc>(__a) {}
+#endif  // _LIBCPP_CXX03_LANG
+};
+
+template <class _Tp, class _Alloc>
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_TRIVIALLY_RELOCATABLE __forward_list_relocate_base<_Tp, _Alloc, true>
+    : protected __forward_list_base<_Tp, _Alloc>
+{
+protected:
+#ifndef _LIBCPP_CXX03_LANG
+    using __forward_list_base<_Tp, _Alloc>::__forward_list_base;
+#else
+    _LIBCPP_INLINE_VISIBILITY
+    __forward_list_relocate_base() = default;
+
+    _LIBCPP_INLINE_VISIBILITY
+    __forward_list_relocate_base(const _Alloc& __a)
+        : __forward_list_base<_Tp, _Alloc>(__a) {}
+#endif  // _LIBCPP_CXX03_LANG
+};
+
 template <class _Tp, class _Alloc /*= allocator<_Tp>*/>
 class _LIBCPP_TEMPLATE_VIS forward_list
-    : private __forward_list_base<_Tp, _Alloc>
+    : private __forward_list_relocate_base<_Tp, _Alloc>
 {
+    typedef __forward_list_relocate_base<_Tp, _Alloc> __relocate_base;
     typedef __forward_list_base<_Tp, _Alloc> base;
     typedef typename base::__node_allocator  __node_allocator;
     typedef typename base::__node               __node;
@@ -682,9 +720,7 @@ public:
 
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
-    forward_list(forward_list&& __x)
-        _NOEXCEPT_(is_nothrow_move_constructible<base>::value)
-        : base(_VSTD::move(__x)) {}
+    forward_list(forward_list&& __x) = default;
     forward_list(forward_list&& __x, const allocator_type& __a);
 
     forward_list(initializer_list<value_type> __il);
@@ -885,7 +921,7 @@ forward_list(_InputIterator, _InputIterator, _Alloc)
 template <class _Tp, class _Alloc>
 inline
 forward_list<_Tp, _Alloc>::forward_list(const allocator_type& __a)
-    : base(__a)
+    : __relocate_base(__a)
 {
 }
 
@@ -912,7 +948,7 @@ forward_list<_Tp, _Alloc>::forward_list(size_type __n)
 template <class _Tp, class _Alloc>
 forward_list<_Tp, _Alloc>::forward_list(size_type __n,
                                         const allocator_type& __base_alloc)
-    : base ( __base_alloc )
+    : __relocate_base( __base_alloc )
 {
     if (__n > 0)
     {
@@ -940,7 +976,7 @@ forward_list<_Tp, _Alloc>::forward_list(size_type __n, const value_type& __v)
 template <class _Tp, class _Alloc>
 forward_list<_Tp, _Alloc>::forward_list(size_type __n, const value_type& __v,
                                         const allocator_type& __a)
-    : base(__a)
+    : __relocate_base(__a)
 {
     insert_after(cbefore_begin(), __n, __v);
 }
@@ -962,14 +998,14 @@ forward_list<_Tp, _Alloc>::forward_list(_InputIterator __f, _InputIterator __l,
                                         typename enable_if<
                                           __is_input_iterator<_InputIterator>::value
                                         >::type*)
-    : base(__a)
+    : __relocate_base(__a)
 {
     insert_after(cbefore_begin(), __f, __l);
 }
 
 template <class _Tp, class _Alloc>
 forward_list<_Tp, _Alloc>::forward_list(const forward_list& __x)
-    : base(
+    : __relocate_base(
           __node_traits::select_on_container_copy_construction(__x.__alloc())) {
   insert_after(cbefore_begin(), __x.begin(), __x.end());
 }
@@ -977,7 +1013,7 @@ forward_list<_Tp, _Alloc>::forward_list(const forward_list& __x)
 template <class _Tp, class _Alloc>
 forward_list<_Tp, _Alloc>::forward_list(const forward_list& __x,
                                         const allocator_type& __a)
-    : base(__a)
+    : __relocate_base(__a)
 {
     insert_after(cbefore_begin(), __x.begin(), __x.end());
 }
@@ -998,7 +1034,7 @@ forward_list<_Tp, _Alloc>::operator=(const forward_list& __x)
 template <class _Tp, class _Alloc>
 forward_list<_Tp, _Alloc>::forward_list(forward_list&& __x,
                                         const allocator_type& __a)
-    : base(_VSTD::move(__x), __a)
+    : __relocate_base(_VSTD::move(__x), __a)
 {
     if (base::__alloc() != __x.__alloc())
     {
@@ -1016,7 +1052,7 @@ forward_list<_Tp, _Alloc>::forward_list(initializer_list<value_type> __il)
 template <class _Tp, class _Alloc>
 forward_list<_Tp, _Alloc>::forward_list(initializer_list<value_type> __il,
                                         const allocator_type& __a)
-    : base(__a)
+    : __relocate_base(__a)
 {
     insert_after(cbefore_begin(), __il.begin(), __il.end());
 }

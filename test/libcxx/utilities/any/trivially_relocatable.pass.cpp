@@ -14,6 +14,7 @@
 #include <any>
 
 #if __has_extension(trivially_relocatable)
+#if _LIBCPP_TRIVIALLY_RELOCATABLE_ANY
 
 class _LIBCPP_TRIVIALLY_RELOCATABLE Reloc { ~Reloc(); };
 
@@ -22,6 +23,7 @@ static_assert(std::is_trivially_relocatable<Reloc>::value, "");
 
 static_assert(std::is_trivially_relocatable< std::any >::value, "");
 
+#endif
 #endif
 
 int main() {}

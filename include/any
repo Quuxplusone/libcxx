@@ -116,7 +116,11 @@ void __throw_bad_any_cast()
 }
 
 // Forward declarations
+#ifdef _LIBCPP_TRIVIALLY_RELOCATABLE_ANY
 class _LIBCPP_TEMPLATE_VIS _LIBCPP_TRIVIALLY_RELOCATABLE any;
+#else
+class _LIBCPP_TEMPLATE_VIS any;
+#endif
 
 template <class _ValueType>
 _LIBCPP_INLINE_VISIBILITY
@@ -136,7 +140,11 @@ namespace __any_imp
         , sizeof(_Tp) <= sizeof(_Buffer)
           && alignment_of<_Buffer>::value
              % alignment_of<_Tp>::value == 0
+#ifdef _LIBCPP_TRIVIALLY_RELOCATABLE_ANY
+          && is_trivially_relocatable<_Tp>::value
+#else
           && is_nothrow_move_constructible<_Tp>::value
+#endif
         >;
 
   enum class _Action {
@@ -179,7 +187,7 @@ namespace __any_imp
 
 } // namespace __any_imp
 
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_TRIVIALLY_RELOCATABLE any
+class _LIBCPP_TEMPLATE_VIS any
 {
 public:
   // construct/destruct
