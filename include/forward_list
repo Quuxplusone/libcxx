@@ -558,6 +558,9 @@ private:
     void __move_assign_alloc(__forward_list_base& __x, true_type)
         _NOEXCEPT_(is_nothrow_move_assignable<__node_allocator>::value)
         {__alloc() = _VSTD::move(__x.__alloc());}
+
+public:
+    typedef is_trivially_relocatable<__compressed_pair<__begin_node, __node_allocator> > __allow_trivial_relocation;
 };
 
 #ifndef _LIBCPP_CXX03_LANG
@@ -625,7 +628,9 @@ __forward_list_base<_Tp, _Alloc>::clear() _NOEXCEPT
 }
 
 template <class _Tp, class _Alloc /*= allocator<_Tp>*/>
-class _LIBCPP_TEMPLATE_VIS forward_list
+class _LIBCPP_TEMPLATE_VIS
+      _LIBCPP_TRIVIALLY_RELOCATABLE_IF((__forward_list_base<_Tp, _Alloc>::__allow_trivial_relocation::value))
+      forward_list
     : private __forward_list_base<_Tp, _Alloc>
 {
     typedef __forward_list_base<_Tp, _Alloc> base;
