@@ -763,7 +763,8 @@ private:
 };
 
 template <class _Alloc>
-class __bucket_list_deallocator
+class _LIBCPP_TRIVIALLY_RELOCATABLE_IF((is_trivially_relocatable<__compressed_pair<typename allocator_traits<_Alloc>::size_type, _Alloc>>::value))
+      __bucket_list_deallocator
 {
     typedef _Alloc                                          allocator_type;
     typedef allocator_traits<allocator_type>                __alloc_traits;
@@ -1402,6 +1403,19 @@ private:
 
     void __deallocate_node(__next_pointer __np) _NOEXCEPT;
     __next_pointer __detach() _NOEXCEPT;
+
+public:
+    typedef integral_constant<bool,
+#if _LIBCPP_DEBUG_LEVEL >= 2
+        false
+#else
+        is_trivially_relocatable<__bucket_list>::value &&
+        is_trivially_relocatable<__first_node>::value &&
+        is_trivially_relocatable<__node_allocator>::value &&
+        is_trivially_relocatable<hasher>::value &&
+        is_trivially_relocatable<key_equal>::value
+#endif
+    > __allow_trivial_relocation;
 
     template <class, class, class, class, class> friend class _LIBCPP_TEMPLATE_VIS unordered_map;
     template <class, class, class, class, class> friend class _LIBCPP_TEMPLATE_VIS unordered_multimap;
