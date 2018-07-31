@@ -942,8 +942,7 @@ protected:
     typedef typename __rebind_alloc_helper<__alloc_traits, pointer>::type __pointer_allocator;
     typedef allocator_traits<__pointer_allocator>        __map_traits;
     typedef typename __map_traits::pointer               __map_pointer;
-    typedef typename __rebind_alloc_helper<__alloc_traits, const_pointer>::type __const_pointer_allocator;
-    typedef typename allocator_traits<__const_pointer_allocator>::const_pointer __map_const_pointer;
+    typedef typename allocator_traits<__pointer_allocator>::const_pointer __map_const_pointer;
     typedef __split_buffer<pointer, __pointer_allocator> __map;
 
     typedef __deque_iterator<value_type, pointer, reference, __map_pointer,
