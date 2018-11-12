@@ -195,7 +195,7 @@ public:
     }
 
     _LIBCPP_INLINE_VISIBILITY
-    void deallocate(_ValueType * __p, size_t __n) _NOEXCEPT {
+    void deallocate(_ValueType * __p, size_t __n) {
         _LIBCPP_ASSERT(__n <= __max_size(),
                        "deallocate called for size which exceeds max_size()");
         __res_->deallocate(__p, __n * sizeof(_ValueType), alignof(_ValueType));
@@ -265,7 +265,7 @@ public:
 
     template <class _Tp>
     _LIBCPP_INLINE_VISIBILITY
-    void destroy(_Tp * __p) _NOEXCEPT
+    void destroy(_Tp * __p)
         { __p->~_Tp(); }
 
     _LIBCPP_INLINE_VISIBILITY

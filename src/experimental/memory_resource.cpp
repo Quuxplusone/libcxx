@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "experimental/memory_resource"
+#include "memory"
 
 #ifndef _LIBCPP_HAS_NO_ATOMIC_HEADER
 #include "atomic"
@@ -23,22 +24,40 @@ _LIBCPP_BEGIN_NAMESPACE_LFTS_PMR
 
 // new_delete_resource()
 
+#ifdef _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
+static bool is_aligned_to(void *ptr, size_t align)
+{
+    void *p2 = ptr;
+    size_t space = 1;
+    void *result = _VSTD::align(align, 1, p2, space);
+    return (result == ptr);
+}
+#endif
+
 class _LIBCPP_TYPE_VIS __new_delete_memory_resource_imp
     : public memory_resource
 {
-public:
-    ~__new_delete_memory_resource_imp() = default;
-
-protected:
-    virtual void* do_allocate(size_t __size, size_t __align)
-        { return _VSTD::__libcpp_allocate(__size, __align); /* FIXME */}
-
-    virtual void do_deallocate(void* __p, size_t __n, size_t __align) {
-      _VSTD::__libcpp_deallocate(__p, __n, __align); /* FIXME */
+    void *do_allocate(size_t bytes, size_t align) override
+    {
+#ifndef _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
+        return _VSTD::__libcpp_allocate(bytes, align);
+#else
+        if (bytes == 0)
+            bytes = 1;
+        void *result = _VSTD::__libcpp_allocate(bytes, align);
+        if (!is_aligned_to(result, align)) {
+            _VSTD::__libcpp_deallocate(result, bytes, align);
+            __throw_bad_alloc();
+        }
+        return result;
+#endif
     }
 
-    virtual bool do_is_equal(memory_resource const & __other) const _NOEXCEPT
-        { return &__other == this; }
+    void do_deallocate(void *p, size_t bytes, size_t align) override
+        { _VSTD::__libcpp_deallocate(p, bytes, align); }
+
+    bool do_is_equal(const memory_resource& other) const _NOEXCEPT override
+        { return &other == this; }
 };
 
 // null_memory_resource()
@@ -46,16 +65,10 @@ protected:
 class _LIBCPP_TYPE_VIS __null_memory_resource_imp
     : public memory_resource
 {
-public:
-    ~__null_memory_resource_imp() = default;
-
-protected:
-    virtual void* do_allocate(size_t, size_t) {
-        __throw_bad_alloc();
-    }
-    virtual void do_deallocate(void *, size_t, size_t) {}
-    virtual bool do_is_equal(memory_resource const & __other) const _NOEXCEPT
-    { return &__other == this; }
+    void *do_allocate(size_t, size_t) override { __throw_bad_alloc(); }
+    void do_deallocate(void *, size_t, size_t) override {}
+    bool do_is_equal(const memory_resource& other) const _NOEXCEPT override
+        { return &other == this; }
 };
 
 namespace {
