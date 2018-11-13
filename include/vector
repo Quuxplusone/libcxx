@@ -480,6 +480,7 @@ protected:
     _LIBCPP_INLINE_VISIBILITY
     ~__vector_base()
     {
+        ((vector<_Tp, _Allocator>*)this)->__annotate_delete();
         if (__begin_ != nullptr) {
             clear();
             __alloc_traits::deallocate(__alloc(), __begin_, capacity());
@@ -697,14 +698,13 @@ public:
                                     value_type,
                                     typename iterator_traits<_ForwardIterator>::reference>::value>::type* = 0);
 
+#if _LIBCPP_DEBUG_LEVEL >= 2
     _LIBCPP_INLINE_VISIBILITY
     ~vector()
     {
-        __annotate_delete();
-#if _LIBCPP_DEBUG_LEVEL >= 2
         __get_db()->__erase_c(this);
-#endif
     }
+#endif
 
     vector(const vector& __x);
     vector(const vector& __x, const allocator_type& __a);
@@ -1077,6 +1077,7 @@ private:
     };
 #endif
 
+    friend class __vector_base<_Tp, _Allocator>;
 };
 
 #ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
