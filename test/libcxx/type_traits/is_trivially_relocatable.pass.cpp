@@ -125,6 +125,7 @@ static_assert(std::is_trivially_relocatable<std::unordered_multimap<K,T>>::value
 static_assert(std::is_trivially_relocatable<std::unordered_multiset<K>>::value == NotDebug, "");
 static_assert(std::is_trivially_relocatable<std::unordered_set<K>>::value == NotDebug, "");
 static_assert(std::is_trivially_relocatable<std::vector<T>>::value == NotDebug, "");
+//static_assert(std::is_trivially_relocatable<std::vector<bool>>::value, "");
 static_assert(std::is_trivially_relocatable<std::stack<T>>::value, "");
 static_assert(std::is_trivially_relocatable<std::queue<T>>::value, "");
 static_assert(std::is_trivially_relocatable<std::priority_queue<T>>::value == NotDebug, "");
@@ -140,6 +141,7 @@ static_assert(std::is_trivially_relocatable<std::pmr::unordered_multimap<K,T>>::
 static_assert(std::is_trivially_relocatable<std::pmr::unordered_multiset<K>>::value == NotDebug, "");
 static_assert(std::is_trivially_relocatable<std::pmr::unordered_set<K>>::value == NotDebug, "");
 static_assert(std::is_trivially_relocatable<std::pmr::vector<T>>::value == NotDebug, "");
+//static_assert(std::is_trivially_relocatable<std::pmr::vector<bool>>::value, "");
 static_assert(std::is_trivially_relocatable<std::array<R, 5>::iterator>::value, "");
 static_assert(std::is_trivially_relocatable<std::array<T, 5>::iterator>::value, "");
 static_assert(std::is_trivially_relocatable<std::deque<T>::iterator>::value, "");
@@ -158,10 +160,14 @@ static_assert(std::is_trivially_relocatable<std::unordered_multimap<K,T>::local_
 static_assert(std::is_trivially_relocatable<std::unordered_multiset<K>::local_iterator>::value == NotDebug, "");
 static_assert(std::is_trivially_relocatable<std::unordered_set<K>::local_iterator>::value == NotDebug, "");
 static_assert(std::is_trivially_relocatable<std::vector<T>::iterator>::value == NotDebug, "");
+static_assert(std::is_trivially_relocatable<std::vector<T>::const_iterator>::value == NotDebug, "");
+static_assert(std::is_trivially_relocatable<std::vector<bool>::iterator>::value, "");
+static_assert(std::is_trivially_relocatable<std::vector<bool>::const_iterator>::value, "");
 static_assert(std::is_trivially_relocatable<std::reverse_iterator<int*>>::value, "");
 static_assert(std::is_trivially_relocatable<std::back_insert_iterator<std::deque<int>>>::value, "");
 static_assert(std::is_trivially_relocatable<std::front_insert_iterator<std::list<int>>>::value, "");
 static_assert(std::is_trivially_relocatable<std::insert_iterator<std::vector<int>>>::value == NotDebug, "");
+static_assert(std::is_trivially_relocatable<std::insert_iterator<std::vector<bool>>>::value, "");
 static_assert(std::is_trivially_relocatable<std::istream_iterator<R>>::value, "");
 static_assert(!std::is_trivially_relocatable<std::istream_iterator<T>>::value, "");
 static_assert(std::is_trivially_relocatable<std::ostream_iterator<R>>::value, "");
