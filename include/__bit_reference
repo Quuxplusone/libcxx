@@ -1109,6 +1109,15 @@ public:
     {}
 
     _LIBCPP_INLINE_VISIBILITY
+    __bit_iterator(const __bit_iterator& __it) _NOEXCEPT
+#ifndef _LIBCPP_CXX03_LANG
+        = default;
+#else
+        : __seg_(__it.__seg_), __ctz_(__it.__ctz_) {}
+#endif
+
+    template<class _ConstB = integral_constant<bool, _IsConst>, class _Enabled = typename enable_if<_ConstB::value>::type>
+    _LIBCPP_INLINE_VISIBILITY
     __bit_iterator(const __bit_iterator<_Cp, false>& __it) _NOEXCEPT
         : __seg_(__it.__seg_), __ctz_(__it.__ctz_) {}
 
