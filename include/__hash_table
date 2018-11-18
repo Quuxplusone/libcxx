@@ -136,7 +136,7 @@ __next_hash_pow2(size_t __n)
 }
 
 
-template <class _Tp, class _Hash, class _Equal, class _Alloc> class __hash_table;
+template <class _Tp, class _Hash, class _Equal, class _Alloc> class _LIBCPP_MAYBE_TRIVIALLY_RELOCATABLE __hash_table;
 
 template <class _NodePtr>      class _LIBCPP_TEMPLATE_VIS __hash_iterator;
 template <class _ConstNodePtr> class _LIBCPP_TEMPLATE_VIS __hash_const_iterator;
@@ -773,7 +773,7 @@ private:
 };
 
 template <class _Alloc>
-class __bucket_list_deallocator
+class _LIBCPP_MAYBE_TRIVIALLY_RELOCATABLE __bucket_list_deallocator
 {
     typedef _Alloc                                          allocator_type;
     typedef allocator_traits<allocator_type>                __alloc_traits;
@@ -792,6 +792,16 @@ public:
     __bucket_list_deallocator(const allocator_type& __a, size_type __size)
         _NOEXCEPT_(is_nothrow_copy_constructible<allocator_type>::value)
         : __data_(__size, __a) {}
+
+#ifndef _LIBCPP_CXX03_LANG
+    _LIBCPP_INLINE_VISIBILITY
+    __bucket_list_deallocator(__bucket_list_deallocator&& __x)
+        _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
+        : __data_(_VSTD::move(__x.__data_))
+    {
+        __x.size() = 0;
+    }
+#endif
 
     _LIBCPP_INLINE_VISIBILITY
     size_type& size() _NOEXCEPT {return __data_.first();}
@@ -892,7 +902,7 @@ struct __diagnose_hash_table_helper<
 #endif // _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
-class __hash_table
+class _LIBCPP_MAYBE_TRIVIALLY_RELOCATABLE __hash_table
 {
 public:
     typedef _Tp    value_type;
@@ -1410,88 +1420,8 @@ private:
     void __deallocate_node(__next_pointer __np) _NOEXCEPT;
     __next_pointer __detach() _NOEXCEPT;
 
-public:
-    typedef integral_constant<bool,
-        is_trivially_relocatable<__bucket_list>::value &&
-        is_trivially_relocatable<__first_node>::value &&
-        is_trivially_relocatable<__node_allocator>::value &&
-        is_trivially_relocatable<hasher>::value &&
-        is_trivially_relocatable<key_equal>::value
-    > __allow_trivial_relocation;
-
     template <class, class, class, class, class> friend class _LIBCPP_TEMPLATE_VIS unordered_map;
     template <class, class, class, class, class> friend class _LIBCPP_TEMPLATE_VIS unordered_multimap;
-};
-
-template <class _Tp, class _Hash, class _Equal, class _Alloc,
-    bool = __hash_table<_Tp, _Hash, _Equal, _Alloc>::__allow_trivial_relocation::value>
-class __hash_table_relocate_base
-    : public __hash_table<_Tp, _Hash, _Equal, _Alloc>
-{
-#ifndef _LIBCPP_CXX03_LANG
-    using __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table;
-#else
-public:
-    _LIBCPP_INLINE_VISIBILITY
-    __hash_table_relocate_base()
-        : __hash_table<_Tp, _Hash, _Equal, _Alloc>() {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    __hash_table_relocate_base(const _Hash& __hf, const _Equal& __eql)
-        : __hash_table<_Tp, _Hash, _Equal, _Alloc>(__hf, __eql) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    __hash_table_relocate_base(const _Hash& __hf, const _Equal& __eql,
-                 const _Alloc& __a)
-        : __hash_table<_Tp, _Hash, _Equal, _Alloc>(__hf, __eql, __a) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    explicit __hash_table_relocate_base(const _Alloc& __a)
-        : __hash_table<_Tp, _Hash, _Equal, _Alloc>(__a) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    __hash_table_relocate_base(const __hash_table_relocate_base& __u)
-        : __hash_table<_Tp, _Hash, _Equal, _Alloc>(__u) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    __hash_table_relocate_base(const __hash_table_relocate_base& __u, const _Alloc& __a)
-        : __hash_table<_Tp, _Hash, _Equal, _Alloc>(__u, __a) {}
-#endif
-};
-
-template <class _Tp, class _Hash, class _Equal, class _Alloc>
-class _LIBCPP_TRIVIALLY_RELOCATABLE __hash_table_relocate_base<_Tp, _Hash, _Equal, _Alloc, true>
-    : public __hash_table<_Tp, _Hash, _Equal, _Alloc>
-{
-#ifndef _LIBCPP_CXX03_LANG
-    using __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table;
-#else
-public:
-    _LIBCPP_INLINE_VISIBILITY
-    __hash_table_relocate_base()
-        : __hash_table<_Tp, _Hash, _Equal, _Alloc>() {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    __hash_table_relocate_base(const _Hash& __hf, const _Equal& __eql)
-        : __hash_table<_Tp, _Hash, _Equal, _Alloc>(__hf, __eql) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    __hash_table_relocate_base(const _Hash& __hf, const _Equal& __eql,
-                 const _Alloc& __a)
-        : __hash_table<_Tp, _Hash, _Equal, _Alloc>(__hf, __eql, __a) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    explicit __hash_table_relocate_base(const _Alloc& __a)
-        : __hash_table<_Tp, _Hash, _Equal, _Alloc>(__a) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    __hash_table_relocate_base(const __hash_table_relocate_base& __u)
-        : __hash_table<_Tp, _Hash, _Equal, _Alloc>(__u) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    __hash_table_relocate_base(const __hash_table_relocate_base& __u, const _Alloc& __a)
-        : __hash_table<_Tp, _Hash, _Equal, _Alloc>(__u, __a) {}
-#endif
 };
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
@@ -2948,6 +2878,16 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::bucket_size(size_type __n) const
             ;
     }
     return __r;
+}
+
+template <class _Tp, class _Hash, class _Equal, class _Alloc>
+inline _LIBCPP_INLINE_VISIBILITY
+void
+swap(__hash_table<_Tp, _Hash, _Equal, _Alloc>& __x,
+     __hash_table<_Tp, _Hash, _Equal, _Alloc>& __y)
+    _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y)))
+{
+    __x.swap(__y);
 }
 
 #if _LIBCPP_DEBUG_LEVEL >= 2
