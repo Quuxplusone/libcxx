@@ -241,7 +241,7 @@ void __throw_bad_variant_access() {
 }
 
 template <class... _Types>
-class _LIBCPP_TEMPLATE_VIS variant;
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_MAYBE_TRIVIALLY_RELOCATABLE variant;
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS variant_size;
@@ -724,7 +724,8 @@ class _LIBCPP_TEMPLATE_VIS __destructor;
 
 #define _LIBCPP_VARIANT_DESTRUCTOR(destructible_trait, destructor, destroy)    \
   template <class... _Types>                                                   \
-  class _LIBCPP_TEMPLATE_VIS __destructor<__traits<_Types...>,                 \
+  class _LIBCPP_TEMPLATE_VIS _LIBCPP_MAYBE_TRIVIALLY_RELOCATABLE               \
+                             __destructor<__traits<_Types...>,                 \
                                            destructible_trait>                 \
       : public __base<destructible_trait, _Types...> {                         \
     using __base_type = __base<destructible_trait, _Types...>;                 \
@@ -1089,18 +1090,6 @@ private:
   }
 };
 
-template <bool, class... _Types>
-struct _LIBCPP_TEMPLATE_VIS __impl_relocate_base : __impl<_Types...>
-{
-    using __impl<_Types...>::__impl;
-};
-
-template <class... _Types>
-struct _LIBCPP_TEMPLATE_VIS _LIBCPP_TRIVIALLY_RELOCATABLE __impl_relocate_base<true, _Types...>  : __impl<_Types...>
-{
-    using __impl<_Types...>::__impl;
-};
-
 template <class... _Types>
 struct __overload;
 
@@ -1313,7 +1302,7 @@ public:
   }
 
 private:
-  __variant_detail::__impl_relocate_base<__all<is_trivially_relocatable_v<_Types>...>::value, _Types...> __impl;
+  __variant_detail::__impl<_Types...> __impl;
 
   friend struct __variant_detail::__access::__variant;
   friend struct __variant_detail::__visitation::__variant;
