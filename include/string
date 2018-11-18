@@ -661,25 +661,44 @@ struct __padding<_CharT, 1>
 
 #endif  // _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
 
-template<class _CharT, class _Allocator>
-class _LIBCPP_TEMPLATE_VIS __basic_string_storage_base
-    : protected __basic_string_common<true>
+template<class _CharT, class _Traits, class _Allocator>
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_MAYBE_TRIVIALLY_RELOCATABLE basic_string
+    : private __basic_string_common<true>
 {
-protected:
+public:
+    typedef basic_string                                 __self;
+    typedef basic_string_view<_CharT, _Traits>           __self_view;
+    typedef _Traits                                      traits_type;
     typedef _CharT                                       value_type;
     typedef _Allocator                                   allocator_type;
     typedef allocator_traits<allocator_type>             __alloc_traits;
     typedef typename __alloc_traits::size_type           size_type;
+    typedef typename __alloc_traits::difference_type     difference_type;
+    typedef value_type&                                  reference;
+    typedef const value_type&                            const_reference;
     typedef typename __alloc_traits::pointer             pointer;
     typedef typename __alloc_traits::const_pointer       const_pointer;
 
-public:
-    typedef integral_constant<bool,
-        is_trivially_relocatable<pointer>::value &&
-        is_trivially_relocatable<allocator_type>::value
-    > __allow_trivial_relocation;
+    static_assert((!is_array<value_type>::value), "Character type of basic_string must not be an array");
+    static_assert(( is_standard_layout<value_type>::value), "Character type of basic_string must be standard-layout");
+    static_assert(( is_trivial<value_type>::value), "Character type of basic_string must be trivial");
+    static_assert(( is_same<_CharT, typename traits_type::char_type>::value),
+                  "traits_type::char_type must be the same type as CharT");
+    static_assert(( is_same<typename allocator_type::value_type, value_type>::value),
+                  "Allocator::value_type must be same type as value_type");
 
-protected:
+#if defined(_LIBCPP_RAW_ITERATORS)
+    typedef pointer                                      iterator;
+    typedef const_pointer                                const_iterator;
+#else  // defined(_LIBCPP_RAW_ITERATORS)
+    typedef __wrap_iter<pointer>                         iterator;
+    typedef __wrap_iter<const_pointer>                   const_iterator;
+#endif  // defined(_LIBCPP_RAW_ITERATORS)
+    typedef _VSTD::reverse_iterator<iterator>             reverse_iterator;
+    typedef _VSTD::reverse_iterator<const_iterator>       const_reverse_iterator;
+
+private:
+
 #ifdef _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
 
     struct __long
@@ -763,226 +782,6 @@ protected:
 
     __compressed_pair<__rep, allocator_type> __r_;
 
-    _LIBCPP_INLINE_VISIBILITY
-    __basic_string_storage_base() = default;
-
-    _LIBCPP_INLINE_VISIBILITY
-    __basic_string_storage_base(__second_tag, const allocator_type& __a)
-        : __r_(__second_tag(), __a) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    __basic_string_storage_base(__second_tag, allocator_type&& __a)
-        : __r_(__second_tag(), _VSTD::move(__a)) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    __basic_string_storage_base(__basic_string_storage_base&& __str)
-#if _LIBCPP_STD_VER <= 14
-        _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
-#else
-        _NOEXCEPT
-#endif
-        : __r_(_VSTD::move(__str.__r_))
-    {
-        __str.__zero();
-    }
-
-    _LIBCPP_INLINE_VISIBILITY
-    ~__basic_string_storage_base()
-    {
-        if (__is_long())
-            __alloc_traits::deallocate(__alloc(), __get_long_pointer(), __get_long_cap());
-    }
-
-    _LIBCPP_INLINE_VISIBILITY
-    allocator_type& __alloc() _NOEXCEPT
-        {return __r_.second();}
-    _LIBCPP_INLINE_VISIBILITY
-    const allocator_type& __alloc() const _NOEXCEPT
-        {return __r_.second();}
-
-#ifdef _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
-
-    _LIBCPP_INLINE_VISIBILITY
-    void __set_short_size(size_type __s) _NOEXCEPT
-#   ifdef _LIBCPP_BIG_ENDIAN
-        {__r_.first().__s.__size_ = (unsigned char)(__s << 1);}
-#   else
-        {__r_.first().__s.__size_ = (unsigned char)(__s);}
-#   endif
-
-    _LIBCPP_INLINE_VISIBILITY
-    size_type __get_short_size() const _NOEXCEPT
-#   ifdef _LIBCPP_BIG_ENDIAN
-        {return __r_.first().__s.__size_ >> 1;}
-#   else
-        {return __r_.first().__s.__size_;}
-#   endif
-
-#else  // _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
-
-    _LIBCPP_INLINE_VISIBILITY
-    void __set_short_size(size_type __s) _NOEXCEPT
-#   ifdef _LIBCPP_BIG_ENDIAN
-        {__r_.first().__s.__size_ = (unsigned char)(__s);}
-#   else
-        {__r_.first().__s.__size_ = (unsigned char)(__s << 1);}
-#   endif
-
-    _LIBCPP_INLINE_VISIBILITY
-    size_type __get_short_size() const _NOEXCEPT
-#   ifdef _LIBCPP_BIG_ENDIAN
-        {return __r_.first().__s.__size_;}
-#   else
-        {return __r_.first().__s.__size_ >> 1;}
-#   endif
-
-#endif  // _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
-
-    _LIBCPP_INLINE_VISIBILITY
-    bool __is_long() const _NOEXCEPT
-        {return bool(__r_.first().__s.__size_ & __short_mask);}
-
-    _LIBCPP_INLINE_VISIBILITY
-    void __set_long_size(size_type __s) _NOEXCEPT
-        {__r_.first().__l.__size_ = __s;}
-    _LIBCPP_INLINE_VISIBILITY
-    size_type __get_long_size() const _NOEXCEPT
-        {return __r_.first().__l.__size_;}
-    _LIBCPP_INLINE_VISIBILITY
-    void __set_size(size_type __s) _NOEXCEPT
-        {if (__is_long()) __set_long_size(__s); else __set_short_size(__s);}
-
-    _LIBCPP_INLINE_VISIBILITY
-    void __set_long_cap(size_type __s) _NOEXCEPT
-        {__r_.first().__l.__cap_  = __long_mask | __s;}
-    _LIBCPP_INLINE_VISIBILITY
-    size_type __get_long_cap() const _NOEXCEPT
-        {return __r_.first().__l.__cap_ & size_type(~__long_mask);}
-
-    _LIBCPP_INLINE_VISIBILITY
-    void __set_long_pointer(pointer __p) _NOEXCEPT
-        {__r_.first().__l.__data_ = __p;}
-    _LIBCPP_INLINE_VISIBILITY
-    pointer __get_long_pointer() _NOEXCEPT
-        {return __r_.first().__l.__data_;}
-    _LIBCPP_INLINE_VISIBILITY
-    const_pointer __get_long_pointer() const _NOEXCEPT
-        {return __r_.first().__l.__data_;}
-    _LIBCPP_INLINE_VISIBILITY
-    pointer __get_short_pointer() _NOEXCEPT
-        {return pointer_traits<pointer>::pointer_to(__r_.first().__s.__data_[0]);}
-    _LIBCPP_INLINE_VISIBILITY
-    const_pointer __get_short_pointer() const _NOEXCEPT
-        {return pointer_traits<const_pointer>::pointer_to(__r_.first().__s.__data_[0]);}
-    _LIBCPP_INLINE_VISIBILITY
-    pointer __get_pointer() _NOEXCEPT
-        {return __is_long() ? __get_long_pointer() : __get_short_pointer();}
-    _LIBCPP_INLINE_VISIBILITY
-    const_pointer __get_pointer() const _NOEXCEPT
-        {return __is_long() ? __get_long_pointer() : __get_short_pointer();}
-
-    _LIBCPP_INLINE_VISIBILITY
-    void __zero() _NOEXCEPT
-    {
-        size_type (&__a)[__n_words] = __r_.first().__r.__words;
-        for (unsigned __i = 0; __i < __n_words; ++__i)
-            __a[__i] = 0;
-    }
-};
-
-template<bool, class _CharT, class _Allocator>
-class _LIBCPP_TEMPLATE_VIS __basic_string_relocate_base
-    : protected __basic_string_storage_base<_CharT, _Allocator>
-{
-protected:
-#ifndef _LIBCPP_CXX03_LANG
-    using __basic_string_storage_base<_CharT, _Allocator>::__basic_string_storage_base;
-#else
-    _LIBCPP_INLINE_VISIBILITY
-    __basic_string_relocate_base() {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    __basic_string_relocate_base(__second_tag, const _Allocator& __a)
-        : __basic_string_storage_base<_CharT, _Allocator>(__second_tag(), __a) {}
-#endif  // _LIBCPP_CXX03_LANG
-};
-
-template<class _CharT, class _Allocator>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_TRIVIALLY_RELOCATABLE __basic_string_relocate_base<true, _CharT, _Allocator>
-    : protected __basic_string_storage_base<_CharT, _Allocator>
-{
-protected:
-#ifndef _LIBCPP_CXX03_LANG
-    using __basic_string_storage_base<_CharT, _Allocator>::__basic_string_storage_base;
-#else
-    _LIBCPP_INLINE_VISIBILITY
-    __basic_string_relocate_base() {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    __basic_string_relocate_base(__second_tag, const _Allocator& __a)
-        : __basic_string_storage_base<_CharT, _Allocator>(__second_tag(), __a) {}
-#endif  // _LIBCPP_CXX03_LANG
-};
-
-template<class _CharT, class _Traits, class _Allocator>
-class _LIBCPP_TEMPLATE_VIS basic_string
-    : private __basic_string_relocate_base<
-        __basic_string_storage_base<_CharT, _Allocator>::__allow_trivial_relocation::value,
-        _CharT, _Allocator>
-{
-protected:
-    typedef __basic_string_relocate_base<
-        __basic_string_storage_base<_CharT, _Allocator>::__allow_trivial_relocation::value,
-        _CharT, _Allocator> __base;
-    using __base::__alloc;
-    using __base::__set_short_size;
-    using __base::__get_short_size;
-    using __base::__set_long_size;
-    using __base::__get_long_size;
-    using __base::__set_size;
-    using __base::__set_long_cap;
-    using __base::__get_long_cap;
-    using __base::__set_long_pointer;
-    using __base::__get_long_pointer;
-    using __base::__get_short_pointer;
-    using __base::__get_pointer;
-    using __base::__zero;
-    using __base::__r_;
-    using __base::__min_cap;
-
-public:
-    using __base::__is_long;
-    typedef basic_string                                 __self;
-    typedef basic_string_view<_CharT, _Traits>           __self_view;
-    typedef _Traits                                      traits_type;
-    typedef _CharT                                       value_type;
-    typedef _Allocator                                   allocator_type;
-    typedef allocator_traits<allocator_type>             __alloc_traits;
-    typedef typename __alloc_traits::size_type           size_type;
-    typedef typename __alloc_traits::difference_type     difference_type;
-    typedef value_type&                                  reference;
-    typedef const value_type&                            const_reference;
-    typedef typename __alloc_traits::pointer             pointer;
-    typedef typename __alloc_traits::const_pointer       const_pointer;
-
-    static_assert((!is_array<value_type>::value), "Character type of basic_string must not be an array");
-    static_assert(( is_standard_layout<value_type>::value), "Character type of basic_string must be standard-layout");
-    static_assert(( is_trivial<value_type>::value), "Character type of basic_string must be trivial");
-    static_assert(( is_same<_CharT, typename traits_type::char_type>::value),
-                  "traits_type::char_type must be the same type as CharT");
-    static_assert(( is_same<typename allocator_type::value_type, value_type>::value),
-                  "Allocator::value_type must be same type as value_type");
-
-#if defined(_LIBCPP_RAW_ITERATORS)
-    typedef pointer                                      iterator;
-    typedef const_pointer                                const_iterator;
-#else  // defined(_LIBCPP_RAW_ITERATORS)
-    typedef __wrap_iter<pointer>                         iterator;
-    typedef __wrap_iter<const_pointer>                   const_iterator;
-#endif  // defined(_LIBCPP_RAW_ITERATORS)
-    typedef _VSTD::reverse_iterator<iterator>             reverse_iterator;
-    typedef _VSTD::reverse_iterator<const_iterator>       const_reverse_iterator;
-
 public:
     static const size_type npos = -1;
 
@@ -1002,19 +801,10 @@ public:
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     basic_string(basic_string&& __str)
-#if _LIBCPP_STD_VER > 14
-        _NOEXCEPT
+#if _LIBCPP_STD_VER <= 14
+        _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value);
 #else
-        _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
-#endif
-#if _LIBCPP_DEBUG_LEVEL >= 2
-    {
-        __get_db()->__insert_c(this);
-        if (__is_long())
-            __get_db()->swap(this, &__str);
-    }
-#else
-    = default;
+        _NOEXCEPT;
 #endif
 
     _LIBCPP_INLINE_VISIBILITY
@@ -1084,13 +874,7 @@ public:
     basic_string(initializer_list<_CharT> __il, const _Allocator& __a);
 #endif  // _LIBCPP_CXX03_LANG
 
-#if _LIBCPP_DEBUG_LEVEL >= 2
-    _LIBCPP_INLINE_VISIBILITY
-    ~basic_string()
-    {
-        __get_db()->__erase_c(this);
-    }
-#endif
+    inline ~basic_string();
 
     _LIBCPP_INLINE_VISIBILITY
     operator __self_view() const _NOEXCEPT { return __self_view(data(), size()); }
@@ -1628,6 +1412,10 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY void __clear_and_shrink() _NOEXCEPT;
     
+    _LIBCPP_INLINE_VISIBILITY
+    bool __is_long() const _NOEXCEPT
+        {return bool(__r_.first().__s.__size_ & __short_mask);}
+
 #if _LIBCPP_DEBUG_LEVEL >= 2
 
     bool __dereferenceable(const const_iterator* __i) const;
@@ -1638,6 +1426,98 @@ public:
 #endif  // _LIBCPP_DEBUG_LEVEL >= 2
 
 private:
+    _LIBCPP_INLINE_VISIBILITY
+    allocator_type& __alloc() _NOEXCEPT
+        {return __r_.second();}
+    _LIBCPP_INLINE_VISIBILITY
+    const allocator_type& __alloc() const _NOEXCEPT
+        {return __r_.second();}
+
+#ifdef _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
+
+    _LIBCPP_INLINE_VISIBILITY
+    void __set_short_size(size_type __s) _NOEXCEPT
+#   ifdef _LIBCPP_BIG_ENDIAN
+        {__r_.first().__s.__size_ = (unsigned char)(__s << 1);}
+#   else
+        {__r_.first().__s.__size_ = (unsigned char)(__s);}
+#   endif
+
+    _LIBCPP_INLINE_VISIBILITY
+    size_type __get_short_size() const _NOEXCEPT
+#   ifdef _LIBCPP_BIG_ENDIAN
+        {return __r_.first().__s.__size_ >> 1;}
+#   else
+        {return __r_.first().__s.__size_;}
+#   endif
+
+#else  // _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
+
+    _LIBCPP_INLINE_VISIBILITY
+    void __set_short_size(size_type __s) _NOEXCEPT
+#   ifdef _LIBCPP_BIG_ENDIAN
+        {__r_.first().__s.__size_ = (unsigned char)(__s);}
+#   else
+        {__r_.first().__s.__size_ = (unsigned char)(__s << 1);}
+#   endif
+
+    _LIBCPP_INLINE_VISIBILITY
+    size_type __get_short_size() const _NOEXCEPT
+#   ifdef _LIBCPP_BIG_ENDIAN
+        {return __r_.first().__s.__size_;}
+#   else
+        {return __r_.first().__s.__size_ >> 1;}
+#   endif
+
+#endif  // _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
+
+    _LIBCPP_INLINE_VISIBILITY
+    void __set_long_size(size_type __s) _NOEXCEPT
+        {__r_.first().__l.__size_ = __s;}
+    _LIBCPP_INLINE_VISIBILITY
+    size_type __get_long_size() const _NOEXCEPT
+        {return __r_.first().__l.__size_;}
+    _LIBCPP_INLINE_VISIBILITY
+    void __set_size(size_type __s) _NOEXCEPT
+        {if (__is_long()) __set_long_size(__s); else __set_short_size(__s);}
+
+    _LIBCPP_INLINE_VISIBILITY
+    void __set_long_cap(size_type __s) _NOEXCEPT
+        {__r_.first().__l.__cap_  = __long_mask | __s;}
+    _LIBCPP_INLINE_VISIBILITY
+    size_type __get_long_cap() const _NOEXCEPT
+        {return __r_.first().__l.__cap_ & size_type(~__long_mask);}
+
+    _LIBCPP_INLINE_VISIBILITY
+    void __set_long_pointer(pointer __p) _NOEXCEPT
+        {__r_.first().__l.__data_ = __p;}
+    _LIBCPP_INLINE_VISIBILITY
+    pointer __get_long_pointer() _NOEXCEPT
+        {return __r_.first().__l.__data_;}
+    _LIBCPP_INLINE_VISIBILITY
+    const_pointer __get_long_pointer() const _NOEXCEPT
+        {return __r_.first().__l.__data_;}
+    _LIBCPP_INLINE_VISIBILITY
+    pointer __get_short_pointer() _NOEXCEPT
+        {return pointer_traits<pointer>::pointer_to(__r_.first().__s.__data_[0]);}
+    _LIBCPP_INLINE_VISIBILITY
+    const_pointer __get_short_pointer() const _NOEXCEPT
+        {return pointer_traits<const_pointer>::pointer_to(__r_.first().__s.__data_[0]);}
+    _LIBCPP_INLINE_VISIBILITY
+    pointer __get_pointer() _NOEXCEPT
+        {return __is_long() ? __get_long_pointer() : __get_short_pointer();}
+    _LIBCPP_INLINE_VISIBILITY
+    const_pointer __get_pointer() const _NOEXCEPT
+        {return __is_long() ? __get_long_pointer() : __get_short_pointer();}
+
+    _LIBCPP_INLINE_VISIBILITY
+    void __zero() _NOEXCEPT
+        {
+            size_type (&__a)[__n_words] = __r_.first().__r.__words;
+            for (unsigned __i = 0; __i < __n_words; ++__i)
+                __a[__i] = 0;
+        }
+
     template <size_type __a> static
         _LIBCPP_INLINE_VISIBILITY
         size_type __align_it(size_type __s) _NOEXCEPT
@@ -1853,7 +1733,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(const allocator_type& __
 #else
         _NOEXCEPT
 #endif
-: __base(__second_tag(), __a)
+: __r_(__second_tag(), __a)
 {
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__insert_c(this);
@@ -1915,7 +1795,7 @@ template <class _CharT, class _Traits, class _Allocator>
 template <class>
 #endif
 basic_string<_CharT, _Traits, _Allocator>::basic_string(const _CharT* __s, const _Allocator& __a)
-    : __base(__second_tag(), __a)
+    : __r_(__second_tag(), __a)
 {
     _LIBCPP_ASSERT(__s != nullptr, "basic_string(const char*, allocator) detected nullptr");
     __init(__s, traits_type::length(__s));
@@ -1938,7 +1818,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(const _CharT* __s, size_
 template <class _CharT, class _Traits, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
 basic_string<_CharT, _Traits, _Allocator>::basic_string(const _CharT* __s, size_type __n, const _Allocator& __a)
-    : __base(__second_tag(), __a)
+    : __r_(__second_tag(), __a)
 {
     _LIBCPP_ASSERT(__n == 0 || __s != nullptr, "basic_string(const char*, n, allocator) detected nullptr");
     __init(__s, __n);
@@ -1949,7 +1829,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(const _CharT* __s, size_
 
 template <class _CharT, class _Traits, class _Allocator>
 basic_string<_CharT, _Traits, _Allocator>::basic_string(const basic_string& __str)
-    : __base(__second_tag(), __alloc_traits::select_on_container_copy_construction(__str.__alloc()))
+    : __r_(__second_tag(), __alloc_traits::select_on_container_copy_construction(__str.__alloc()))
 {
     if (!__str.__is_long())
         __r_.first().__r = __str.__r_.first().__r;
@@ -1963,7 +1843,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(const basic_string& __st
 template <class _CharT, class _Traits, class _Allocator>
 basic_string<_CharT, _Traits, _Allocator>::basic_string(
     const basic_string& __str, const allocator_type& __a)
-    : __base(__second_tag(), __a)
+    : __r_(__second_tag(), __a)
 {
     if (!__str.__is_long())
         __r_.first().__r = __str.__r_.first().__r;
@@ -1978,8 +1858,26 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(
 
 template <class _CharT, class _Traits, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
+basic_string<_CharT, _Traits, _Allocator>::basic_string(basic_string&& __str)
+#if _LIBCPP_STD_VER <= 14
+        _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
+#else
+        _NOEXCEPT
+#endif
+    : __r_(_VSTD::move(__str.__r_))
+{
+    __str.__zero();
+#if _LIBCPP_DEBUG_LEVEL >= 2
+    __get_db()->__insert_c(this);
+    if (__is_long())
+        __get_db()->swap(this, &__str);
+#endif
+}
+
+template <class _CharT, class _Traits, class _Allocator>
+inline _LIBCPP_INLINE_VISIBILITY
 basic_string<_CharT, _Traits, _Allocator>::basic_string(basic_string&& __str, const allocator_type& __a)
-    : __base(__second_tag(), __a)
+    : __r_(__second_tag(), __a)
 {
     if (__str.__is_long() && __a != __str.__alloc()) // copy, not move
         __init(_VSTD::__to_raw_pointer(__str.__get_long_pointer()), __str.__get_long_size());
@@ -2036,7 +1934,7 @@ template <class _CharT, class _Traits, class _Allocator>
 template <class>
 #endif
 basic_string<_CharT, _Traits, _Allocator>::basic_string(size_type __n, _CharT __c, const _Allocator& __a)
-    : __base(__second_tag(), __a)
+    : __r_(__second_tag(), __a)
 {
     __init(__n, __c);
 #if _LIBCPP_DEBUG_LEVEL >= 2
@@ -2048,7 +1946,7 @@ template <class _CharT, class _Traits, class _Allocator>
 basic_string<_CharT, _Traits, _Allocator>::basic_string(const basic_string& __str,
                                                         size_type __pos, size_type __n,
                                                         const _Allocator& __a)
-    : __base(__second_tag(), __a)
+    : __r_(__second_tag(), __a)
 {
     size_type __str_sz = __str.size();
     if (__pos > __str_sz)
@@ -2063,7 +1961,7 @@ template <class _CharT, class _Traits, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
 basic_string<_CharT, _Traits, _Allocator>::basic_string(const basic_string& __str, size_type __pos,
                                                         const _Allocator& __a)
-    : __base(__second_tag(), __a)
+    : __r_(__second_tag(), __a)
 {
     size_type __str_sz = __str.size();
     if (__pos > __str_sz)
@@ -2078,7 +1976,7 @@ template <class _CharT, class _Traits, class _Allocator>
 template <class _Tp, class>
 basic_string<_CharT, _Traits, _Allocator>::basic_string(
              const _Tp& __t, size_type __pos, size_type __n, const allocator_type& __a)
-    : __base(__second_tag(), __a)
+    : __r_(__second_tag(), __a)
 {
     __self_view __sv0 = __t;
     __self_view __sv = __sv0.substr(__pos, __n);
@@ -2102,7 +2000,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(const _Tp & __t)
 template <class _CharT, class _Traits, class _Allocator>
 template <class _Tp, class>
 basic_string<_CharT, _Traits, _Allocator>::basic_string(const _Tp & __t, const _Allocator& __a)
-    : __base(__second_tag(), __a)
+    : __r_(__second_tag(), __a)
 {
     __self_view __sv = __t;
     __init(__sv.data(), __sv.size());
@@ -2185,7 +2083,7 @@ template<class _InputIterator>
 inline _LIBCPP_INLINE_VISIBILITY
 basic_string<_CharT, _Traits, _Allocator>::basic_string(_InputIterator __first, _InputIterator __last,
                                                         const allocator_type& __a)
-    : __base(__second_tag(), __a)
+    : __r_(__second_tag(), __a)
 {
     __init(__first, __last);
 #if _LIBCPP_DEBUG_LEVEL >= 2
@@ -2211,7 +2109,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 
 basic_string<_CharT, _Traits, _Allocator>::basic_string(
     initializer_list<_CharT> __il, const _Allocator& __a)
-    : __base(__second_tag(), __a)
+    : __r_(__second_tag(), __a)
 {
     __init(__il.begin(), __il.end());
 #if _LIBCPP_DEBUG_LEVEL >= 2
@@ -2220,6 +2118,16 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(
 }
 
 #endif  // _LIBCPP_CXX03_LANG
+
+template <class _CharT, class _Traits, class _Allocator>
+basic_string<_CharT, _Traits, _Allocator>::~basic_string()
+{
+#if _LIBCPP_DEBUG_LEVEL >= 2
+    __get_db()->__erase_c(this);
+#endif
+    if (__is_long())
+        __alloc_traits::deallocate(__alloc(), __get_long_pointer(), __get_long_cap());
+}
 
 template <class _CharT, class _Traits, class _Allocator>
 void

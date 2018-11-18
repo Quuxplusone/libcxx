@@ -190,7 +190,7 @@ typedef long long streamoff;        // for char_traits in <string>
 template <class _CharT,             // for <stdexcept>
           class _Traits = char_traits<_CharT>,
           class _Allocator = allocator<_CharT> >
-    class _LIBCPP_TEMPLATE_VIS basic_string;
+    class _LIBCPP_TEMPLATE_VIS _LIBCPP_MAYBE_TRIVIALLY_RELOCATABLE basic_string;
 typedef basic_string<char, char_traits<char>, allocator<char> > string;
 typedef basic_string<wchar_t, char_traits<wchar_t>, allocator<wchar_t> > wstring;
 
