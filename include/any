@@ -117,7 +117,7 @@ void __throw_bad_any_cast()
 
 // Forward declarations
 #ifdef _LIBCPP_TRIVIALLY_RELOCATABLE_ANY
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_TRIVIALLY_RELOCATABLE any;
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_MAYBE_TRIVIALLY_RELOCATABLE any;
 #else
 class _LIBCPP_TEMPLATE_VIS any;
 #endif
