@@ -581,7 +581,7 @@ using __optional_sfinae_assign_base_t = __sfinae_assign_base<
 >;
 
 template <class _Tp>
-class optional
+class _LIBCPP_TRIVIALLY_RELOCATABLE(is_trivially_relocatable<_Tp>::value) optional
     : private __optional_move_assign_base<_Tp>
     , private __optional_sfinae_ctor_base_t<_Tp>
     , private __optional_sfinae_assign_base_t<_Tp>
