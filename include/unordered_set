@@ -386,7 +386,7 @@ public:
                   "Invalid allocator::value_type");
 
 private:
-    typedef __hash_table<value_type, hasher, key_equal, allocator_type> __table;
+    typedef __hash_table_relocate_wrapper<value_type, hasher, key_equal, allocator_type> __table;
 
     __table __table_;
 
@@ -457,9 +457,20 @@ public:
     unordered_set(const unordered_set& __u);
     unordered_set(const unordered_set& __u, const allocator_type& __a);
 #ifndef _LIBCPP_CXX03_LANG
+
     _LIBCPP_INLINE_VISIBILITY
     unordered_set(unordered_set&& __u)
-        _NOEXCEPT_(is_nothrow_move_constructible<__table>::value);
+        _NOEXCEPT_(is_nothrow_move_constructible<__table>::value)
+#if _LIBCPP_DEBUG_LEVEL >= 2
+        : __table_(_VSTD::move(__u.__table_))
+    {
+        __get_db()->__insert_c(this);
+        __get_db()->swap(this, &__u);
+    }
+#else
+    = default;
+#endif
+
     unordered_set(unordered_set&& __u, const allocator_type& __a);
     unordered_set(initializer_list<value_type> __il);
     unordered_set(initializer_list<value_type> __il, size_type __n,
@@ -822,19 +833,6 @@ unordered_set<_Value, _Hash, _Pred, _Alloc>::unordered_set(
 #ifndef _LIBCPP_CXX03_LANG
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
-inline
-unordered_set<_Value, _Hash, _Pred, _Alloc>::unordered_set(
-        unordered_set&& __u)
-    _NOEXCEPT_(is_nothrow_move_constructible<__table>::value)
-    : __table_(_VSTD::move(__u.__table_))
-{
-#if _LIBCPP_DEBUG_LEVEL >= 2
-    __get_db()->__insert_c(this);
-    __get_db()->swap(this, &__u);
-#endif
-}
-
-template <class _Value, class _Hash, class _Pred, class _Alloc>
 unordered_set<_Value, _Hash, _Pred, _Alloc>::unordered_set(
         unordered_set&& __u, const allocator_type& __a)
     : __table_(_VSTD::move(__u.__table_), __a)
@@ -978,7 +976,7 @@ public:
                   "Invalid allocator::value_type");
 
 private:
-    typedef __hash_table<value_type, hasher, key_equal, allocator_type> __table;
+    typedef __hash_table_relocate_wrapper<value_type, hasher, key_equal, allocator_type> __table;
 
     __table __table_;
 
@@ -1049,9 +1047,20 @@ public:
     unordered_multiset(const unordered_multiset& __u);
     unordered_multiset(const unordered_multiset& __u, const allocator_type& __a);
 #ifndef _LIBCPP_CXX03_LANG
+
     _LIBCPP_INLINE_VISIBILITY
     unordered_multiset(unordered_multiset&& __u)
-        _NOEXCEPT_(is_nothrow_move_constructible<__table>::value);
+        _NOEXCEPT_(is_nothrow_move_constructible<__table>::value)
+#if _LIBCPP_DEBUG_LEVEL >= 2
+        : __table_(_VSTD::move(__u.__table_))
+    {
+        __get_db()->__insert_c(this);
+        __get_db()->swap(this, &__u);
+    }
+#else
+    = default;
+#endif
+
     unordered_multiset(unordered_multiset&& __u, const allocator_type& __a);
     unordered_multiset(initializer_list<value_type> __il);
     unordered_multiset(initializer_list<value_type> __il, size_type __n,
@@ -1381,19 +1390,6 @@ unordered_multiset<_Value, _Hash, _Pred, _Alloc>::unordered_multiset(
 }
 
 #ifndef _LIBCPP_CXX03_LANG
-
-template <class _Value, class _Hash, class _Pred, class _Alloc>
-inline
-unordered_multiset<_Value, _Hash, _Pred, _Alloc>::unordered_multiset(
-        unordered_multiset&& __u)
-    _NOEXCEPT_(is_nothrow_move_constructible<__table>::value)
-    : __table_(_VSTD::move(__u.__table_))
-{
-#if _LIBCPP_DEBUG_LEVEL >= 2
-    __get_db()->__insert_c(this);
-    __get_db()->swap(this, &__u);
-#endif
-}
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
 unordered_multiset<_Value, _Hash, _Pred, _Alloc>::unordered_multiset(

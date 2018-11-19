@@ -1420,8 +1420,89 @@ private:
     void __deallocate_node(__next_pointer __np) _NOEXCEPT;
     __next_pointer __detach() _NOEXCEPT;
 
+public:
+    typedef integral_constant<bool,
+        is_trivially_relocatable<__next_pointer>::value &&
+        is_trivially_relocatable<__pointer_allocator>::value &&
+        is_trivially_relocatable<__first_node>::value &&
+        is_trivially_relocatable<__node_allocator>::value &&
+        is_trivially_relocatable<hasher>::value &&
+        is_trivially_relocatable<key_equal>::value
+    > __allow_trivial_relocation;
+
     template <class, class, class, class, class> friend class _LIBCPP_TEMPLATE_VIS unordered_map;
     template <class, class, class, class, class> friend class _LIBCPP_TEMPLATE_VIS unordered_multimap;
+};
+
+template <class _Tp, class _Hash, class _Equal, class _Alloc,
+    bool = __hash_table<_Tp, _Hash, _Equal, _Alloc>::__allow_trivial_relocation::value>
+class __hash_table_relocate_wrapper
+    : public __hash_table<_Tp, _Hash, _Equal, _Alloc>
+{
+#ifndef _LIBCPP_CXX03_LANG
+    using __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table;
+#else
+public:
+    _LIBCPP_INLINE_VISIBILITY
+    __hash_table_relocate_wrapper()
+        : __hash_table<_Tp, _Hash, _Equal, _Alloc>() {}
+
+    _LIBCPP_INLINE_VISIBILITY
+    __hash_table_relocate_wrapper(const _Hash& __hf, const _Equal& __eql)
+        : __hash_table<_Tp, _Hash, _Equal, _Alloc>(__hf, __eql) {}
+
+    _LIBCPP_INLINE_VISIBILITY
+    __hash_table_relocate_wrapper(const _Hash& __hf, const _Equal& __eql,
+                 const _Alloc& __a)
+        : __hash_table<_Tp, _Hash, _Equal, _Alloc>(__hf, __eql, __a) {}
+
+    _LIBCPP_INLINE_VISIBILITY
+    explicit __hash_table_relocate_wrapper(const _Alloc& __a)
+        : __hash_table<_Tp, _Hash, _Equal, _Alloc>(__a) {}
+
+    _LIBCPP_INLINE_VISIBILITY
+    __hash_table_relocate_wrapper(const __hash_table_relocate_wrapper& __u)
+        : __hash_table<_Tp, _Hash, _Equal, _Alloc>(__u) {}
+
+    _LIBCPP_INLINE_VISIBILITY
+    __hash_table_relocate_wrapper(const __hash_table_relocate_wrapper& __u, const _Alloc& __a)
+        : __hash_table<_Tp, _Hash, _Equal, _Alloc>(__u, __a) {}
+#endif
+};
+
+template <class _Tp, class _Hash, class _Equal, class _Alloc>
+class _LIBCPP_TRIVIALLY_RELOCATABLE __hash_table_relocate_wrapper<_Tp, _Hash, _Equal, _Alloc, true>
+    : public __hash_table<_Tp, _Hash, _Equal, _Alloc>
+{
+#ifndef _LIBCPP_CXX03_LANG
+    using __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table;
+#else
+public:
+    _LIBCPP_INLINE_VISIBILITY
+    __hash_table_relocate_wrapper()
+        : __hash_table<_Tp, _Hash, _Equal, _Alloc>() {}
+
+    _LIBCPP_INLINE_VISIBILITY
+    __hash_table_relocate_wrapper(const _Hash& __hf, const _Equal& __eql)
+        : __hash_table<_Tp, _Hash, _Equal, _Alloc>(__hf, __eql) {}
+
+    _LIBCPP_INLINE_VISIBILITY
+    __hash_table_relocate_wrapper(const _Hash& __hf, const _Equal& __eql,
+                 const _Alloc& __a)
+        : __hash_table<_Tp, _Hash, _Equal, _Alloc>(__hf, __eql, __a) {}
+
+    _LIBCPP_INLINE_VISIBILITY
+    explicit __hash_table_relocate_wrapper(const _Alloc& __a)
+        : __hash_table<_Tp, _Hash, _Equal, _Alloc>(__a) {}
+
+    _LIBCPP_INLINE_VISIBILITY
+    __hash_table_relocate_wrapper(const __hash_table_relocate_wrapper& __u)
+        : __hash_table<_Tp, _Hash, _Equal, _Alloc>(__u) {}
+
+    _LIBCPP_INLINE_VISIBILITY
+    __hash_table_relocate_wrapper(const __hash_table_relocate_wrapper& __u, const _Alloc& __a)
+        : __hash_table<_Tp, _Hash, _Equal, _Alloc>(__u, __a) {}
+#endif
 };
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
