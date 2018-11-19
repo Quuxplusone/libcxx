@@ -173,8 +173,8 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Tp, class _Allocator> class __deque_base;
-template <class _Tp, class _Allocator = allocator<_Tp> > class _LIBCPP_TEMPLATE_VIS deque;
+template <class _Tp, class _Allocator> class _LIBCPP_MAYBE_TRIVIALLY_RELOCATABLE __deque_base;
+template <class _Tp, class _Allocator = allocator<_Tp> > class _LIBCPP_TEMPLATE_VIS _LIBCPP_MAYBE_TRIVIALLY_RELOCATABLE deque;
 
 template <class _ValueType, class _Pointer, class _Reference, class _MapPointer,
           class _DiffType, _DiffType _BlockSize>
@@ -921,7 +921,7 @@ __deque_base_common<__b>::__throw_out_of_range() const
 }
 
 template <class _Tp, class _Allocator>
-class __deque_base
+class _LIBCPP_MAYBE_TRIVIALLY_RELOCATABLE __deque_base
     : protected __deque_base_common<true>
 {
     __deque_base(const __deque_base& __c);
@@ -1191,7 +1191,7 @@ __deque_base<_Tp, _Allocator>::clear() _NOEXCEPT
 }
 
 template <class _Tp, class _Allocator /*= allocator<_Tp>*/>
-class _LIBCPP_TEMPLATE_VIS deque
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_MAYBE_TRIVIALLY_RELOCATABLE deque
     : private __deque_base<_Tp, _Allocator>
 {
 public:
