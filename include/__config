@@ -1281,6 +1281,20 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #define _LIBCPP_HAS_NO_IS_AGGREGATE
 #endif
 
+#ifndef _LIBCPP_MAYBE_TRIVIALLY_RELOCATABLE
+#if __has_extension(trivially_relocatable)
+#define _LIBCPP_MAYBE_TRIVIALLY_RELOCATABLE [[clang::maybe_trivially_relocatable]]
+#if _LIBCPP_DEBUG_LEVEL >= 2
+#define _LIBCPP_MAYBE_TRIVIALLY_RELOCATABLE_UNLESS_DEBUG
+#else
+#define _LIBCPP_MAYBE_TRIVIALLY_RELOCATABLE_UNLESS_DEBUG [[clang::maybe_trivially_relocatable]]
+#endif
+#else
+#define _LIBCPP_MAYBE_TRIVIALLY_RELOCATABLE
+#define _LIBCPP_MAYBE_TRIVIALLY_RELOCATABLE_UNLESS_DEBUG
+#endif
+#endif
+
 #if !defined(__cpp_coroutines) || __cpp_coroutines < 201703L
 #define _LIBCPP_HAS_NO_COROUTINES
 #endif

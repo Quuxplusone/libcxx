@@ -2384,7 +2384,7 @@ struct __unique_ptr_deleter_sfinae<_Deleter&> {
 #endif // !defined(_LIBCPP_CXX03_LANG)
 
 template <class _Tp, class _Dp = default_delete<_Tp> >
-class _LIBCPP_TEMPLATE_VIS unique_ptr {
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_MAYBE_TRIVIALLY_RELOCATABLE unique_ptr {
 public:
   typedef _Tp element_type;
   typedef _Dp deleter_type;
@@ -2646,7 +2646,7 @@ public:
 
 
 template <class _Tp, class _Dp>
-class _LIBCPP_TEMPLATE_VIS unique_ptr<_Tp[], _Dp> {
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_MAYBE_TRIVIALLY_RELOCATABLE unique_ptr<_Tp[], _Dp> {
 public:
   typedef _Tp element_type;
   typedef _Dp deleter_type;

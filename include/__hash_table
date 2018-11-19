@@ -136,7 +136,7 @@ __next_hash_pow2(size_t __n)
 }
 
 
-template <class _Tp, class _Hash, class _Equal, class _Alloc> class __hash_table;
+template <class _Tp, class _Hash, class _Equal, class _Alloc> class _LIBCPP_MAYBE_TRIVIALLY_RELOCATABLE __hash_table;
 
 template <class _NodePtr>      class _LIBCPP_TEMPLATE_VIS __hash_iterator;
 template <class _ConstNodePtr> class _LIBCPP_TEMPLATE_VIS __hash_const_iterator;
@@ -773,7 +773,7 @@ private:
 };
 
 template <class _Alloc>
-class __bucket_list_deallocator
+class _LIBCPP_MAYBE_TRIVIALLY_RELOCATABLE __bucket_list_deallocator
 {
     typedef _Alloc                                          allocator_type;
     typedef allocator_traits<allocator_type>                __alloc_traits;
@@ -902,7 +902,7 @@ struct __diagnose_hash_table_helper<
 #endif // _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
-class __hash_table
+class _LIBCPP_MAYBE_TRIVIALLY_RELOCATABLE __hash_table
 {
 public:
     typedef _Tp    value_type;
