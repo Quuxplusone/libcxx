@@ -920,6 +920,22 @@ __deque_base_common<__b>::__throw_out_of_range() const
     _VSTD::__throw_out_of_range("deque");
 }
 
+template <class _Allocator>
+struct __deque_allow_trivial_relocation {
+    typedef _Allocator                               allocator_type;
+    typedef allocator_traits<allocator_type>         __alloc_traits;
+    typedef typename __alloc_traits::pointer         pointer;
+    typedef typename __alloc_traits::size_type       size_type;
+    typedef typename __rebind_alloc_helper<__alloc_traits, pointer>::type __pointer_allocator;
+
+    typedef integral_constant<bool,
+        is_trivially_relocatable<pointer>::value &&
+        is_trivially_relocatable<__pointer_allocator>::value &&
+        is_trivially_relocatable<size_type>::value &&
+        is_trivially_relocatable<allocator_type>::value
+    > type;
+};
+
 template <class _Tp, class _Allocator>
 class __deque_base
     : protected __deque_base_common<true>
@@ -1191,7 +1207,7 @@ __deque_base<_Tp, _Allocator>::clear() _NOEXCEPT
 }
 
 template <class _Tp, class _Allocator /*= allocator<_Tp>*/>
-class _LIBCPP_TEMPLATE_VIS deque
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_TRIVIALLY_RELOCATABLE(__deque_allow_trivial_relocation<_Allocator>::type::value) deque
     : private __deque_base<_Tp, _Allocator>
 {
 public:
