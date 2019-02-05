@@ -506,6 +506,16 @@ public:
     void pop();
 
     _LIBCPP_INLINE_VISIBILITY
+    void replace_top(const value_type& __v);
+#ifndef _LIBCPP_CXX03_LANG
+    _LIBCPP_INLINE_VISIBILITY
+    void replace_top(value_type&& __v);
+    template <class... _Args>
+    _LIBCPP_INLINE_VISIBILITY
+    void reemplace_top(_Args&&... __args);
+#endif  // _LIBCPP_CXX03_LANG
+
+    _LIBCPP_INLINE_VISIBILITY
     void swap(priority_queue& __q)
         _NOEXCEPT_(__is_nothrow_swappable<container_type>::value &&
                    __is_nothrow_swappable<value_compare>::value);
@@ -726,6 +736,38 @@ priority_queue<_Tp, _Container, _Compare>::pop()
     _VSTD::pop_heap(c.begin(), c.end(), comp);
     c.pop_back();
 }
+
+template <class _Tp, class _Container, class _Compare>
+inline
+void
+priority_queue<_Tp, _Container, _Compare>::replace_top(const value_type& __v)
+{
+    c.front() = __v;
+    __sift_down<typename add_lvalue_reference<_Compare>::type>(c.begin(), c.end(), comp, c.size(), c.begin());
+}
+
+#ifndef _LIBCPP_CXX03_LANG
+
+template <class _Tp, class _Container, class _Compare>
+inline
+void
+priority_queue<_Tp, _Container, _Compare>::replace_top(value_type&& __v)
+{
+    c.front() = _VSTD::move(__v);
+    __sift_down<typename add_lvalue_reference<_Compare>::type>(c.begin(), c.end(), comp, c.size(), c.begin());
+}
+
+template <class _Tp, class _Container, class _Compare>
+template <class... _Args>
+inline
+void
+priority_queue<_Tp, _Container, _Compare>::reemplace_top(_Args&&... __args)
+{
+    c.front() = _Tp(_VSTD::forward<_Args>(__args)...);
+    __sift_down<typename add_lvalue_reference<_Compare>::type>(c.begin(), c.end(), comp, c.size(), c.begin());
+}
+
+#endif  // _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Container, class _Compare>
 inline
