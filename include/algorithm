@@ -4907,12 +4907,12 @@ pop_heap(_RandomAccessIterator __first, _RandomAccessIterator __last)
     _VSTD::pop_heap(__first, __last, __less<typename iterator_traits<_RandomAccessIterator>::value_type>());
 }
 
-// poke_heap
+// __poke_heap
 
 template <class _RandomAccessIterator, class _Compare>
 inline _LIBCPP_INLINE_VISIBILITY
 void
-poke_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp)
+__poke_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp)
 {
     typename iterator_traits<_RandomAccessIterator>::difference_type __len = __last - __first;
 #ifdef _LIBCPP_DEBUG
@@ -4928,9 +4928,9 @@ poke_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare 
 template <class _RandomAccessIterator>
 inline _LIBCPP_INLINE_VISIBILITY
 void
-poke_heap(_RandomAccessIterator __first, _RandomAccessIterator __last)
+__poke_heap(_RandomAccessIterator __first, _RandomAccessIterator __last)
 {
-    _VSTD::poke_heap(__first, __last, __less<typename iterator_traits<_RandomAccessIterator>::value_type>());
+    _VSTD::__poke_heap(__first, __last, __less<typename iterator_traits<_RandomAccessIterator>::value_type>());
 }
 
 // make_heap

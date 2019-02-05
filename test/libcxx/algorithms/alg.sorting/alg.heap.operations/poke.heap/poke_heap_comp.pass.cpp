@@ -12,7 +12,7 @@
 //   requires ShuffleIterator<Iter>
 //         && LessThanComparable<Iter::value_type>
 //   void
-//   poke_heap(Iter first, Iter last);
+//   __poke_heap(Iter first, Iter last);
 
 #include <algorithm>
 #include <functional>
@@ -39,7 +39,7 @@ void test(int M, int N)
         control[M-1] = inputs[i];
         heap[0] = inputs[i];
         std::push_heap(control, control+M, std::greater<int>());
-        std::poke_heap(heap, heap+M, std::greater<int>());
+        std::__poke_heap(heap, heap+M, std::greater<int>());
         assert(std::is_heap(control, control+M, std::greater<int>()));
         assert(std::is_heap(heap, heap+M, std::greater<int>()));
         assert(std::is_permutation(heap, heap+M, control));
@@ -55,11 +55,11 @@ int main(int, char**)
 
     // Test small cases
     int ia[] = {3, 2, 1};
-    std::poke_heap(ia, ia, std::greater<int>());  // no-op
+    std::__poke_heap(ia, ia, std::greater<int>());  // no-op
     assert(ia[0] == 3);
-    std::poke_heap(ia, ia+1, std::greater<int>());  // no-op
+    std::__poke_heap(ia, ia+1, std::greater<int>());  // no-op
     assert(ia[0] == 3);
-    std::poke_heap(ia, ia+2, std::greater<int>());
+    std::__poke_heap(ia, ia+2, std::greater<int>());
     assert(ia[0] == 2 && ia[1] == 3);
 
   return 0;

@@ -10,7 +10,7 @@
 
 // priority_queue();
 
-// void replace_top(const value_type& v);
+// void __replace_top(const value_type& v);
 
 #include <queue>
 #include <cassert>
@@ -22,9 +22,9 @@ int main(int, char**)
     assert(q.top() == 1);
     q.push(3);
     assert(q.top() == 3);
-    q.replace_top(2);
+    q.__replace_top(2);
     assert(q.top() == 2);
-    q.replace_top(0);
+    q.__replace_top(0);
     assert(q.top() == 1);
 
   return 0;

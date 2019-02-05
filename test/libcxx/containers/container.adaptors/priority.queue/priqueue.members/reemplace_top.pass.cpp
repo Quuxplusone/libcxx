@@ -12,7 +12,7 @@
 
 // priority_queue();
 
-// template <class... Args> void reemplace_top(Args&&... args);
+// template <class... Args> void __reemplace_top(Args&&... args);
 
 #include <queue>
 #include <cassert>
@@ -26,9 +26,9 @@ int main(int, char**)
     assert(q.top() == Emplaceable(1, 2.5));
     q.emplace(3, 4.5);
     assert(q.top() == Emplaceable(3, 4.5));
-    q.reemplace_top(2, 3.5);
+    q.__reemplace_top(2, 3.5);
     assert(q.top() == Emplaceable(2, 3.5));
-    q.reemplace_top(0, 1.5);
+    q.__reemplace_top(0, 1.5);
     assert(q.top() == Emplaceable(1, 2.5));
 
   return 0;
