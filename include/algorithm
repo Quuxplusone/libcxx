@@ -4957,6 +4957,32 @@ pop_heap(_RandomAccessIterator __first, _RandomAccessIterator __last)
     _VSTD::pop_heap(__first, __last, __less<typename iterator_traits<_RandomAccessIterator>::value_type>());
 }
 
+// poke_heap
+
+template <class _RandomAccessIterator, class _Compare>
+inline _LIBCPP_INLINE_VISIBILITY
+void
+poke_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp)
+{
+    typename iterator_traits<_RandomAccessIterator>::difference_type __len = __last - __first;
+#ifdef _LIBCPP_DEBUG
+    typedef typename add_lvalue_reference<__debug_less<_Compare> >::type _Comp_ref;
+    __debug_less<_Compare> __c(__comp);
+    __sift_down<_Comp_ref>(__first, __last, __comp, __len, __first);
+#else  // _LIBCPP_DEBUG
+    typedef typename add_lvalue_reference<_Compare>::type _Comp_ref;
+    __sift_down<_Comp_ref>(__first, __last, __comp, __len, __first);
+#endif  // _LIBCPP_DEBUG
+}
+
+template <class _RandomAccessIterator>
+inline _LIBCPP_INLINE_VISIBILITY
+void
+poke_heap(_RandomAccessIterator __first, _RandomAccessIterator __last)
+{
+    _VSTD::poke_heap(__first, __last, __less<typename iterator_traits<_RandomAccessIterator>::value_type>());
+}
+
 // make_heap
 
 template <class _Compare, class _RandomAccessIterator>
