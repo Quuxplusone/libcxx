@@ -1800,6 +1800,16 @@ template <class _Tp, class _Allocator>
 void
 vector<_Tp, _Allocator>::__move_range(pointer __from_s, pointer __from_e, pointer __to)
 {
+#ifndef _LIBCPP_NO_TR_INSERT_OPTIMIZATION
+    if (__vector_relocate_via_memcpy<_Tp, _Allocator>::value && (__to == __from_s + 1) && (__from_e - __from_s >= 2)) {
+        _VSTD::memmove(_VSTD::__to_raw_pointer(__to + 1), _VSTD::__to_raw_pointer(__to), ((__from_e - __from_s) - 1) * sizeof(_Tp));
+        ++this->__end_;
+        __alloc_traits::construct(this->__alloc(),
+                                  _VSTD::__to_raw_pointer(__to),
+                                  _VSTD::move(*__from_s));
+        return;
+    }
+#endif
     pointer __old_last = this->__end_;
     difference_type __n = __old_last - __to;
     {
