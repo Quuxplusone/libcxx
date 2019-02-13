@@ -306,6 +306,13 @@ bool operator!=(polymorphic_allocator<_Tp> const & __lhs,
 
 } // namespace pmr
 
+template <class _Up, class _Tp, class... _Args>
+struct __has_trivial_construct<pmr::polymorphic_allocator<_Up>, _Tp, _Args...> :
+    integral_constant<bool, !_VSTD::__uses_alloc_ctor<_Tp, pmr::polymorphic_allocator<_Up>&, _Args...>::value> {};
+
+template <class _Up, class _Tp>
+struct __has_trivial_destroy<pmr::polymorphic_allocator<_Up>, _Tp> : true_type {};
+
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
