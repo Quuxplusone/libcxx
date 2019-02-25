@@ -22,6 +22,7 @@
 #include <cassert>
 #include <cstddef>
 #include <climits> // INT_MAX
+#include <memory_resource>
 
 #include "test_macros.h"
 #include "test_iterators.h"
@@ -92,6 +93,13 @@ int main(int, char**)
     std::deque deq(source); // deque(deque &)
     static_assert(std::is_same_v<decltype(deq)::value_type, long double>, "");
     static_assert(std::is_same_v<decltype(deq)::allocator_type, std::allocator<long double>>, "");
+    assert(deq.size() == 0);
+    }
+
+    {
+    std::pmr::deque<long> source;
+    std::deque deq(source, std::pmr::new_delete_resource());
+    ASSERT_SAME_TYPE(decltype(deq), decltype(source));
     assert(deq.size() == 0);
     }
 

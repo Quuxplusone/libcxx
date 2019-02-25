@@ -31,6 +31,7 @@
 #include <climits> // INT_MAX
 #include <functional>
 #include <map>
+#include <memory_resource>
 #include <type_traits>
 
 #include "test_allocator.h"
@@ -83,6 +84,13 @@ int main(int, char**)
     {
     std::multimap<int, long> source;
     std::multimap m(source, std::allocator<int>());
+    ASSERT_SAME_TYPE(decltype(m), decltype(source));
+    assert(m.size() == 0);
+    }
+
+    {
+    std::pmr::multimap<int, long> source;
+    std::multimap m(source, std::pmr::new_delete_resource());
     ASSERT_SAME_TYPE(decltype(m), decltype(source));
     assert(m.size() == 0);
     }

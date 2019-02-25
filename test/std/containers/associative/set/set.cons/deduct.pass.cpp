@@ -30,6 +30,7 @@
 #include <cassert>
 #include <climits> // INT_MAX
 #include <functional>
+#include <memory_resource>
 #include <set>
 #include <type_traits>
 
@@ -87,6 +88,13 @@ int main(int, char**)
     std::set<long> source;
     std::set s(source, std::allocator<int>());
     ASSERT_SAME_TYPE(decltype(s), std::set<long>);
+    assert(s.size() == 0);
+    }
+
+    {
+    std::pmr::set<long> source;
+    std::set s(source, std::pmr::new_delete_resource());
+    ASSERT_SAME_TYPE(decltype(s), decltype(source));
     assert(s.size() == 0);
     }
 

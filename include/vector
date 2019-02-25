@@ -1077,6 +1077,13 @@ template<class _InputIterator,
          >
 vector(_InputIterator, _InputIterator, _Alloc)
   -> vector<typename iterator_traits<_InputIterator>::value_type, _Alloc>;
+
+template<class _Tp, class _Allocator,
+         class _Alloc,
+         class = typename enable_if<uses_allocator<vector<_Tp, _Allocator>, _Alloc>::value, void>::type
+         >
+vector(vector<_Tp, _Allocator>, _Alloc)
+  -> vector<_Tp, _Allocator>;
 #endif
 
 template <class _Tp, class _Allocator>

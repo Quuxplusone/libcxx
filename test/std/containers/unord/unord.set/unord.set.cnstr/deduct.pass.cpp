@@ -50,6 +50,7 @@
 #include <algorithm> // is_permutation
 #include <cassert>
 #include <climits> // INT_MAX
+#include <memory_resource>
 #include <type_traits>
 #include <unordered_set>
 
@@ -120,6 +121,13 @@ int main(int, char**)
     ASSERT_SAME_TYPE(decltype(s), decltype(source));
     assert(s.size() == 0);
     assert(s.get_allocator().get_id() == 42);
+    }
+
+    {
+    std::pmr::unordered_set<long> source;
+    std::unordered_set s(source, std::pmr::new_delete_resource());
+    ASSERT_SAME_TYPE(decltype(s), decltype(source));
+    assert(s.size() == 0);
     }
 
     {

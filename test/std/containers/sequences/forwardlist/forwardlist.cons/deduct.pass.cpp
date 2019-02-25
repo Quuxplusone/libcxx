@@ -22,6 +22,7 @@
 #include <cassert>
 #include <cstddef>
 #include <climits> // INT_MAX
+#include <memory_resource>
 
 #include "test_macros.h"
 #include "test_iterators.h"
@@ -97,6 +98,13 @@ int main(int, char**)
     std::forward_list fwl(source); // deque(deque &)
     static_assert(std::is_same_v<decltype(fwl)::value_type, long double>, "");
     static_assert(std::is_same_v<decltype(fwl)::allocator_type, std::allocator<long double>>, "");
+    assert(std::distance(fwl.begin(), fwl.end()) == 0); // no size for forward_list
+    }
+
+    {
+    std::pmr::forward_list<long> source;
+    std::forward_list fwl(source, std::pmr::new_delete_resource());
+    ASSERT_SAME_TYPE(decltype(fwl), decltype(source));
     assert(std::distance(fwl.begin(), fwl.end()) == 0); // no size for forward_list
     }
 

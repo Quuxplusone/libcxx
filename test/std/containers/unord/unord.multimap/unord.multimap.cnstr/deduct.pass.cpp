@@ -59,6 +59,7 @@
 #include <algorithm> // is_permutation
 #include <cassert>
 #include <climits> // INT_MAX
+#include <memory_resource>
 #include <type_traits>
 #include <unordered_map>
 
@@ -134,6 +135,13 @@ int main(int, char**)
     std::unordered_multimap m{source, a};
     ASSERT_SAME_TYPE(decltype(m), decltype(source));
     assert(m.get_allocator().get_id() == 43);
+    assert(m.size() == 0);
+    }
+
+    {
+    std::pmr::unordered_multimap<long, int> source;
+    std::unordered_multimap m(source, std::pmr::new_delete_resource());
+    ASSERT_SAME_TYPE(decltype(m), decltype(source));
     assert(m.size() == 0);
     }
 

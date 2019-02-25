@@ -22,6 +22,7 @@
 #include <cassert>
 #include <cstddef>
 #include <climits> // INT_MAX
+#include <memory_resource>
 
 #include "test_macros.h"
 #include "test_iterators.h"
@@ -95,6 +96,13 @@ int main(int, char**)
     assert(vec.size() == 0);
     }
 
+    {
+    std::pmr::vector<long> source;
+    std::vector vec(source, std::pmr::new_delete_resource());
+    ASSERT_SAME_TYPE(decltype(vec), decltype(source));
+    assert(vec.size() == 0);
+    }
+
 
 //  A couple of vector<bool> tests, too!
     {
@@ -110,6 +118,13 @@ int main(int, char**)
     std::vector vec(source); // vector(vector &)
     static_assert(std::is_same_v<decltype(vec)::value_type, bool>, "");
     static_assert(std::is_same_v<decltype(vec)::allocator_type, std::allocator<bool>>, "");
+    assert(vec.size() == 0);
+    }
+
+    {
+    std::pmr::vector<bool> source;
+    std::vector vec(source, std::pmr::new_delete_resource());
+    ASSERT_SAME_TYPE(decltype(vec), decltype(source));
     assert(vec.size() == 0);
     }
 

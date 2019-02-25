@@ -850,7 +850,7 @@ public:
     typedef _Tp                                            mapped_type;
     typedef _Hash                                          hasher;
     typedef _Pred                                          key_equal;
-    typedef _Alloc                                         allocator_type;
+    typedef typename __identity<_Alloc>::type              allocator_type;
     typedef pair<const key_type, mapped_type>              value_type;
     typedef value_type&                                    reference;
     typedef const value_type&                              const_reference;
@@ -1735,7 +1735,7 @@ public:
     typedef _Tp                                            mapped_type;
     typedef _Hash                                          hasher;
     typedef _Pred                                          key_equal;
-    typedef _Alloc                                         allocator_type;
+    typedef typename __identity<_Alloc>::type              allocator_type;
     typedef pair<const key_type, mapped_type>              value_type;
     typedef value_type&                                    reference;
     typedef const value_type&                              const_reference;

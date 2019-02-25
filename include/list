@@ -1152,6 +1152,13 @@ template<class _InputIterator,
          >
 list(_InputIterator, _InputIterator, _Alloc)
   -> list<typename iterator_traits<_InputIterator>::value_type, _Alloc>;
+
+template<class _Tp, class _Allocator,
+         class _Alloc,
+         class = typename enable_if<uses_allocator<list<_Tp, _Allocator>, _Alloc>::value, void>::type
+         >
+list(list<_Tp, _Allocator>, _Alloc)
+  -> list<_Tp, _Allocator>;
 #endif
 
 // Link in nodes [__f, __l] just prior to __p

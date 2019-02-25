@@ -1532,6 +1532,13 @@ template<class _InputIterator,
          >
 deque(_InputIterator, _InputIterator, _Alloc)
   -> deque<typename iterator_traits<_InputIterator>::value_type, _Alloc>;
+
+template<class _Tp, class _Allocator,
+         class _Alloc,
+         class = typename enable_if<uses_allocator<deque<_Tp, _Allocator>, _Alloc>::value, void>::type
+         >
+deque(deque<_Tp, _Allocator>, _Alloc)
+  -> deque<_Tp, _Allocator>;
 #endif
 
 

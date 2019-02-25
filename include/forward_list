@@ -916,6 +916,13 @@ template<class _InputIterator,
          >
 forward_list(_InputIterator, _InputIterator, _Alloc)
   -> forward_list<typename iterator_traits<_InputIterator>::value_type, _Alloc>;
+
+template<class _Tp, class _Allocator,
+         class _Alloc,
+         class = typename enable_if<uses_allocator<forward_list<_Tp, _Allocator>, _Alloc>::value, void>::type
+         >
+forward_list(forward_list<_Tp, _Allocator>, _Alloc)
+  -> forward_list<_Tp, _Allocator>;
 #endif
 
 template <class _Tp, class _Alloc>
