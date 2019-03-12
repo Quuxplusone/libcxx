@@ -1477,12 +1477,12 @@ template<class _InputIterator, class _Compare = less<__iter_key_type<_InputItera
 map(_InputIterator, _InputIterator, _Compare = _Compare(), _Allocator = _Allocator())
   -> map<__iter_key_type<_InputIterator>, __iter_mapped_type<_InputIterator>, _Compare, _Allocator>;
 
-template<class _Key, class _Tp, class _Compare = less<_Key>,
+template<class _Key, class _Tp, class _Compare = less<typename _VSTD::remove_const<_Key>::type>,
          class _Allocator = allocator<pair<const _Key, _Tp>>,
          class = typename enable_if<!__is_allocator<_Compare>::value, void>::type,
          class = typename enable_if<__is_allocator<_Allocator>::value, void>::type>
 map(initializer_list<pair<_Key, _Tp>>, _Compare = _Compare(), _Allocator = _Allocator())
-  -> map<_Key, _Tp, _Compare, _Allocator>;
+  -> map<typename _VSTD::remove_const<_Key>::type, _Tp, _Compare, _Allocator>;
 
 template<class _InputIterator, class _Allocator,
          class = typename enable_if<__is_allocator<_Allocator>::value, void>::type>
@@ -1493,7 +1493,7 @@ map(_InputIterator, _InputIterator, _Allocator)
 template<class _Key, class _Tp, class _Allocator,
          class = typename enable_if<__is_allocator<_Allocator>::value, void>::type>
 map(initializer_list<pair<_Key, _Tp>>, _Allocator)
-  -> map<_Key, _Tp, less<_Key>, _Allocator>;
+  -> map<typename _VSTD::remove_const<_Key>::type, _Tp, less<typename _VSTD::remove_const<_Key>::type>, _Allocator>;
 #endif
 
 #ifndef _LIBCPP_CXX03_LANG
@@ -2128,12 +2128,12 @@ template<class _InputIterator, class _Compare = less<__iter_key_type<_InputItera
 multimap(_InputIterator, _InputIterator, _Compare = _Compare(), _Allocator = _Allocator())
   -> multimap<__iter_key_type<_InputIterator>, __iter_mapped_type<_InputIterator>, _Compare, _Allocator>;
 
-template<class _Key, class _Tp, class _Compare = less<_Key>,
+template<class _Key, class _Tp, class _Compare = less<typename _VSTD::remove_const<_Key>::type>,
          class _Allocator = allocator<pair<const _Key, _Tp>>,
          class = typename enable_if<!__is_allocator<_Compare>::value, void>::type,
          class = typename enable_if<__is_allocator<_Allocator>::value, void>::type>
 multimap(initializer_list<pair<_Key, _Tp>>, _Compare = _Compare(), _Allocator = _Allocator())
-  -> multimap<_Key, _Tp, _Compare, _Allocator>;
+  -> multimap<typename _VSTD::remove_const<_Key>::type, _Tp, _Compare, _Allocator>;
 
 template<class _InputIterator, class _Allocator,
          class = typename enable_if<__is_allocator<_Allocator>::value, void>::type>
@@ -2144,7 +2144,7 @@ multimap(_InputIterator, _InputIterator, _Allocator)
 template<class _Key, class _Tp, class _Allocator,
          class = typename enable_if<__is_allocator<_Allocator>::value, void>::type>
 multimap(initializer_list<pair<_Key, _Tp>>, _Allocator)
-  -> multimap<_Key, _Tp, less<_Key>, _Allocator>;
+  -> multimap<typename _VSTD::remove_const<_Key>::type, _Tp, less<typename _VSTD::remove_const<_Key>::type>, _Allocator>;
 #endif
 
 #ifndef _LIBCPP_CXX03_LANG
