@@ -1768,7 +1768,16 @@ vector<_Tp, _Allocator>::erase(const_iterator __position)
         "vector::erase(iterator) called with a non-dereferenceable iterator");
     difference_type __ps = __position - cbegin();
     pointer __p = this->__begin_ + __ps;
-    this->__destruct_at_end(_VSTD::move(__p + 1, this->__end_, __p));
+    _Tp *__rawp = _VSTD::__to_raw_pointer(__p);
+    if (__vector_relocate_via_memcpy<_Tp, _Allocator>::value) {
+        __alloc_traits::destroy(this->__alloc(), __rawp);
+        --this->__end_;
+        if (__p != this->__end_) {
+            _VSTD::memmove(__rawp, __rawp + 1, this->__end_ - __p);
+        }
+    } else {
+        this->__destruct_at_end(_VSTD::move(__p + 1, this->__end_, __p));
+    }
     this->__invalidate_iterators_past(__p-1);
     iterator __r = __make_iter(__p);
     return __r;
