@@ -15,6 +15,7 @@
 
 /*  Constant                                Value
     __cpp_lib_nonmember_container_access    201411L [C++17]
+    __cpp_lib_string_view_regex             201901L [C++2a]
 */
 
 #include <regex>
@@ -26,10 +27,18 @@
 #   error "__cpp_lib_nonmember_container_access should not be defined before c++17"
 # endif
 
+# ifdef __cpp_lib_string_view_regex
+#   error "__cpp_lib_string_view_regex should not be defined before c++2a"
+# endif
+
 #elif TEST_STD_VER == 14
 
 # ifdef __cpp_lib_nonmember_container_access
 #   error "__cpp_lib_nonmember_container_access should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_string_view_regex
+#   error "__cpp_lib_string_view_regex should not be defined before c++2a"
 # endif
 
 #elif TEST_STD_VER == 17
@@ -41,6 +50,10 @@
 #   error "__cpp_lib_nonmember_container_access should have the value 201411L in c++17"
 # endif
 
+# ifdef __cpp_lib_string_view_regex
+#   error "__cpp_lib_string_view_regex should not be defined before c++2a"
+# endif
+
 #elif TEST_STD_VER > 17
 
 # ifndef __cpp_lib_nonmember_container_access
@@ -48,6 +61,13 @@
 # endif
 # if __cpp_lib_nonmember_container_access != 201411L
 #   error "__cpp_lib_nonmember_container_access should have the value 201411L in c++2a"
+# endif
+
+# ifndef __cpp_lib_string_view_regex
+#   error "__cpp_lib_string_view_regex should be defined in c++2a"
+# endif
+# if __cpp_lib_string_view_regex != 201901L
+#   error "__cpp_lib_string_view_regex should have the value 201901L in c++2a"
 # endif
 
 #endif // TEST_STD_VER > 17

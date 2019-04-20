@@ -577,6 +577,11 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
      "c++2a": 201902L,
    },
    "headers": ["numeric"],
+  {"name": "__cpp_lib_string_view_regex",
+   "values": {
+     "c++2a": 201901L,
+   },
+   "headers": ["regex"],
    },
 ]], key=lambda tc: tc["name"])
 

@@ -23,6 +23,7 @@
 //     typedef Allocator                                         allocator_type;
 //     typedef typename iterator_traits<BidirectionalIterator>::value_type char_type;
 //     typedef basic_string<char_type>                           string_type;
+//     typedef basic_string_view<char_type>                      string_view_type;
 
 #include <regex>
 #include <type_traits>
@@ -42,6 +43,9 @@ test()
     static_assert((std::is_same<typename MR::allocator_type, std::allocator<std::sub_match<CharT*> > >::value), "");
     static_assert((std::is_same<typename MR::char_type, CharT>::value), "");
     static_assert((std::is_same<typename MR::string_type, std::basic_string<CharT> >::value), "");
+#if defined(__cpp_lib_string_view_regex)
+    static_assert((std::is_same<typename MR::string_view_type, std::basic_string_view<CharT> >::value), "");
+#endif
 }
 
 int main(int, char**)

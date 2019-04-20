@@ -1,0 +1,81 @@
+//===----------------------------------------------------------------------===//
+//
+//                     the llvm compiler infrastructure
+//
+// this file is dual licensed under the mit and the university of illinois open
+// source licenses. see license.txt for details.
+//
+//===----------------------------------------------------------------------===//
+
+// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
+
+// <regex>
+
+// template <class traits, class charT, class ST, class FST, class FSA>
+//     basic_string<charT, ST>
+//     regex_replace(basic_string_view<charT, ST> sv,
+//                   const basic_regex<charT, traits>& e,
+//                   const basic_string<charT, FST, FSA>& fmt,
+//                   regex_constants::match_flag_type flags =
+//                                              regex_constants::match_default);
+
+#include <regex>
+#include <cassert>
+#include "test_macros.h"
+
+int main() {
+  {
+     std::regex phone_numbers("\\d{3}-\\d{4}");
+     std::string_view phone_book("555-1234, 555-2345, 555-3456");
+     std::string r = std::regex_replace(phone_book,
+                                                                 phone_numbers,
+																 std::string("123-$&"),
+																 std::regex_constants::match_default);
+     assert(r == "123-555-1234, 123-555-2345, 123-555-3456");
+  }
+  {
+    std::regex phone_numbers("\\d{3}-\\d{4}");
+    std::string_view phone_book("555-1234, 555-2345, 555-3456");
+    std::string r = std::regex_replace(phone_book,
+                                                                phone_numbers,
+																std::string("123-$&"),
+																std::regex_constants::format_sed);
+    assert(r == "123-$555-1234, 123-$555-2345, 123-$555-3456");
+  }
+  {
+    std::regex phone_numbers("\\d{3}-\\d{4}");
+    std::string_view phone_book("555-1234, 555-2345, 555-3456");
+    std::string r = std::regex_replace(phone_book,
+                                                                phone_numbers,
+																std::string("123-&"),
+																std::regex_constants::format_sed);
+    assert(r == "123-555-1234, 123-555-2345, 123-555-3456");
+  }
+  {
+    std::regex phone_numbers("\\d{3}-\\d{4}");
+    std::string_view phone_book("555-1234, 555-2345, 555-3456");
+    std::string r = std::regex_replace(phone_book,
+                                                                phone_numbers,
+																std::string("123-$&"),
+																std::regex_constants::format_no_copy);
+    assert(r == "123-555-1234123-555-2345123-555-3456");
+  }
+  {
+    std::regex phone_numbers("\\d{3}-\\d{4}");
+    std::string_view phone_book("555-1234, 555-2345, 555-3456");
+    std::string r = std::regex_replace(phone_book,
+                                                                phone_numbers,
+																std::string("123-$&"),
+																std::regex_constants::format_first_only);
+    assert(r == "123-555-1234, 555-2345, 555-3456");
+  }
+  {
+    std::regex phone_numbers("\\d{3}-\\d{4}");
+    std::string_view phone_book("555-1234, 555-2345, 555-3456");
+    std::string r = std::regex_replace(phone_book,
+                                                                phone_numbers,
+																std::string("123-$&"),
+																std::regex_constants::format_first_only | std::regex_constants::format_no_copy);
+    assert(r == "123-555-1234");
+  }
+}
