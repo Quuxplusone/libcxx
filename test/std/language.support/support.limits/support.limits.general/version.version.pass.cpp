@@ -86,6 +86,7 @@
     __cpp_lib_shared_timed_mutex                   201402L [C++14]
     __cpp_lib_string_udls                          201304L [C++14]
     __cpp_lib_string_view                          201606L [C++17]
+    __cpp_lib_string_view_regex                    201901L [C++2a]
     __cpp_lib_three_way_comparison                 201711L [C++2a]
     __cpp_lib_to_chars                             201611L [C++17]
     __cpp_lib_transformation_trait_aliases         201304L [C++14]
@@ -391,6 +392,10 @@
 
 # ifdef __cpp_lib_string_view
 #   error "__cpp_lib_string_view should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_string_view_regex
+#   error "__cpp_lib_string_view_regex should not be defined before c++2a"
 # endif
 
 # ifdef __cpp_lib_three_way_comparison
@@ -779,6 +784,10 @@
 
 # ifdef __cpp_lib_string_view
 #   error "__cpp_lib_string_view should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_string_view_regex
+#   error "__cpp_lib_string_view_regex should not be defined before c++2a"
 # endif
 
 # ifdef __cpp_lib_three_way_comparison
@@ -1365,6 +1374,10 @@
 # endif
 # if __cpp_lib_string_view != 201606L
 #   error "__cpp_lib_string_view should have the value 201606L in c++17"
+# endif
+
+# ifdef __cpp_lib_string_view_regex
+#   error "__cpp_lib_string_view_regex should not be defined before c++2a"
 # endif
 
 # ifdef __cpp_lib_three_way_comparison
@@ -2089,6 +2102,13 @@
 # endif
 # if __cpp_lib_string_view != 201606L
 #   error "__cpp_lib_string_view should have the value 201606L in c++2a"
+# endif
+
+# ifndef __cpp_lib_string_view_regex
+#   error "__cpp_lib_string_view_regex should be defined in c++2a"
+# endif
+# if __cpp_lib_string_view_regex != 201901L
+#   error "__cpp_lib_string_view_regex should have the value 201901L in c++2a"
 # endif
 
 # if !defined(_LIBCPP_VERSION)

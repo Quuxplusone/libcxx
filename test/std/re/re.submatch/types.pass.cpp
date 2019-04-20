@@ -17,6 +17,7 @@
 //     typedef typename iterator_traits<iterator>::value_type      value_type;
 //     typedef typename iterator_traits<iterator>::difference_type difference_type;
 //     typedef basic_string<value_type>                            string_type;
+//     typedef basic_string_view<value_type>                       string_view_type;
 //
 //     bool matched;
 //     ...
@@ -35,6 +36,9 @@ int main(int, char**)
         static_assert((std::is_same<SM::value_type, char>::value), "");
         static_assert((std::is_same<SM::difference_type, std::ptrdiff_t>::value), "");
         static_assert((std::is_same<SM::string_type, std::string>::value), "");
+#if defined(__cpp_lib_string_view_regex)
+        static_assert((std::is_same<SM::string_view_type, std::string_view>::value), "");
+#endif
         static_assert((std::is_convertible<SM*, std::pair<char*, char*>*>::value), "");
 
         SM sm;
@@ -48,6 +52,9 @@ int main(int, char**)
         static_assert((std::is_same<SM::value_type, wchar_t>::value), "");
         static_assert((std::is_same<SM::difference_type, std::ptrdiff_t>::value), "");
         static_assert((std::is_same<SM::string_type, std::wstring>::value), "");
+#if defined(__cpp_lib_string_view_regex)
+        static_assert((std::is_same<SM::string_view_type, std::wstring_view>::value), "");
+#endif
         static_assert((std::is_convertible<SM*, std::pair<wchar_t*, wchar_t*>*>::value), "");
 
         SM sm;
@@ -60,6 +67,10 @@ int main(int, char**)
         static_assert((std::is_same<std::wcsub_match, std::sub_match<const wchar_t*> >::value), "");
         static_assert((std::is_same<std::ssub_match, std::sub_match<std::string::const_iterator> >::value), "");
         static_assert((std::is_same<std::wssub_match, std::sub_match<std::wstring::const_iterator> >::value), "");
+#if defined(__cpp_lib_string_view_regex)
+        static_assert((std::is_same<std::svsub_match, std::sub_match<std::string_view::const_iterator> >::value), "");
+        static_assert((std::is_same<std::wsvsub_match, std::sub_match<std::wstring_view::const_iterator> >::value), "");
+#endif
     }
 
   return 0;
