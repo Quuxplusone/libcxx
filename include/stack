@@ -128,24 +128,7 @@ public:
         _NOEXCEPT_(is_nothrow_default_constructible<container_type>::value)
         : c() {}
 
-    _LIBCPP_INLINE_VISIBILITY
-    stack(const stack& __q) : c(__q.c) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    stack& operator=(const stack& __q) {c = __q.c; return *this;}
-
-
 #ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY
-    stack(stack&& __q)
-        _NOEXCEPT_(is_nothrow_move_constructible<container_type>::value)
-        : c(_VSTD::move(__q.c)) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    stack& operator=(stack&& __q)
-        _NOEXCEPT_(is_nothrow_move_assignable<container_type>::value)
-        {c = _VSTD::move(__q.c); return *this;}
-
     _LIBCPP_INLINE_VISIBILITY
     explicit stack(container_type&& __c) : c(_VSTD::move(__c)) {}
 #endif  // _LIBCPP_CXX03_LANG
