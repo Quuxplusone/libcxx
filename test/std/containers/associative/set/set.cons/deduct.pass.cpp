@@ -47,7 +47,7 @@ int main(int, char **) {
     std::set s(std::begin(arr), std::end(arr));
 
     ASSERT_SAME_TYPE(decltype(s), std::set<int>);
-    int expected_s[] = { 1, 2, 3, INT_MAX };
+    const int expected_s[] = { 1, 2, 3, INT_MAX };
     assert(std::equal(s.begin(), s.end(), std::begin(expected_s),
                       std::end(expected_s)));
   }
@@ -57,7 +57,7 @@ int main(int, char **) {
     std::set s(std::begin(arr), std::end(arr), std::greater<int>());
 
     ASSERT_SAME_TYPE(decltype(s), std::set<int, std::greater<int> >);
-    int expected_s[] = { INT_MAX, 3, 2, 1 };
+    const int expected_s[] = { INT_MAX, 3, 2, 1 };
     assert(std::equal(s.begin(), s.end(), std::begin(expected_s),
                       std::end(expected_s)));
   }
@@ -69,7 +69,7 @@ int main(int, char **) {
 
     ASSERT_SAME_TYPE(decltype(s),
                      std::set<int, std::greater<int>, test_allocator<int> >);
-    int expected_s[] = { INT_MAX, 3, 2, 1 };
+    const int expected_s[] = { INT_MAX, 3, 2, 1 };
     assert(std::equal(s.begin(), s.end(), std::begin(expected_s),
                       std::end(expected_s)));
     assert(s.get_allocator().get_id() == 42);
@@ -84,7 +84,7 @@ int main(int, char **) {
 
   {
     std::set<long> source;
-    std::set s{ source };
+    std::set s{ source };  // braces instead of parens
     ASSERT_SAME_TYPE(decltype(s), std::set<long>);
     assert(s.size() == 0);
   }
@@ -100,7 +100,7 @@ int main(int, char **) {
     std::set s{ 1, 2, 1, INT_MAX, 3 };
 
     ASSERT_SAME_TYPE(decltype(s), std::set<int>);
-    int expected_s[] = { 1, 2, 3, INT_MAX };
+    const int expected_s[] = { 1, 2, 3, INT_MAX };
     assert(std::equal(s.begin(), s.end(), std::begin(expected_s),
                       std::end(expected_s)));
   }
@@ -109,7 +109,7 @@ int main(int, char **) {
     std::set s({ 1, 2, 1, INT_MAX, 3 }, std::greater<int>());
 
     ASSERT_SAME_TYPE(decltype(s), std::set<int, std::greater<int> >);
-    int expected_s[] = { INT_MAX, 3, 2, 1 };
+    const int expected_s[] = { INT_MAX, 3, 2, 1 };
     assert(std::equal(s.begin(), s.end(), std::begin(expected_s),
                       std::end(expected_s)));
   }
@@ -120,7 +120,7 @@ int main(int, char **) {
 
     ASSERT_SAME_TYPE(decltype(s),
                      std::set<int, std::greater<int>, test_allocator<int> >);
-    int expected_s[] = { INT_MAX, 3, 2, 1 };
+    const int expected_s[] = { INT_MAX, 3, 2, 1 };
     assert(std::equal(s.begin(), s.end(), std::begin(expected_s),
                       std::end(expected_s)));
     assert(s.get_allocator().get_id() == 43);
@@ -132,7 +132,7 @@ int main(int, char **) {
 
     ASSERT_SAME_TYPE(decltype(s),
                      std::set<int, std::less<int>, test_allocator<int> >);
-    int expected_s[] = { 1, 2, 3, INT_MAX };
+    const int expected_s[] = { 1, 2, 3, INT_MAX };
     assert(std::equal(s.begin(), s.end(), std::begin(expected_s),
                       std::end(expected_s)));
     assert(s.get_allocator().get_id() == 44);
@@ -143,7 +143,7 @@ int main(int, char **) {
 
     ASSERT_SAME_TYPE(decltype(s),
                      std::set<int, std::less<int>, test_allocator<int> >);
-    int expected_s[] = { 1, 2, 3, INT_MAX };
+    const int expected_s[] = { 1, 2, 3, INT_MAX };
     assert(std::equal(s.begin(), s.end(), std::begin(expected_s),
                       std::end(expected_s)));
     assert(s.get_allocator().get_id() == 45);
