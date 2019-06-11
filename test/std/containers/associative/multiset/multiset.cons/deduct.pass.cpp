@@ -92,7 +92,7 @@ int main(int, char **) {
 
   {
     std::multiset<long> source;
-    std::multiset s(source, std::allocator<int>());
+    std::multiset s(source, std::multiset<long>::allocator_type());
     ASSERT_SAME_TYPE(decltype(s), std::multiset<long>);
     assert(s.size() == 0);
   }

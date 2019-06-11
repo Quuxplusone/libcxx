@@ -91,7 +91,7 @@ int main(int, char **) {
 
   {
     std::set<long> source;
-    std::set s(source, std::allocator<int>());
+    std::set s(source, std::set<long>::allocator_type());
     ASSERT_SAME_TYPE(decltype(s), std::set<long>);
     assert(s.size() == 0);
   }
