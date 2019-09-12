@@ -3044,6 +3044,18 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool __libcpp_is_trivially_relocatable_v
     = __libcpp_is_trivially_relocatable<_Tp>::value;
 #endif
 
+// is_trivially_relocatable
+
+template <class _Tp>
+struct _LIBCPP_TEMPLATE_VIS is_trivially_relocatable
+    : public __libcpp_is_trivially_relocatable<_Tp> {};
+
+#if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
+template <class _Tp>
+_LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_trivially_relocatable_v
+    = is_trivially_relocatable<_Tp>::value;
+#endif
+
 // is_nothrow_constructible
 
 #if __has_keyword(__is_nothrow_constructible)

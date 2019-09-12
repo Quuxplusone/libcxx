@@ -3364,6 +3364,12 @@ _Tp *__libcpp_relocate_at(_Tp *__source, _Tp *__dest) {
     return _VSTD::__relocate_at2(__source, __dest);
 }
 
+template<class _Tp>
+inline _LIBCPP_INLINE_VISIBILITY
+_Tp *relocate_at(_Tp *__source, _Tp *__dest) {
+    return _VSTD::__relocate_at2(__source, __dest);
+}
+
 // __libcpp_uninitialized_relocate
 
 template<class _ForwardIt1, class _ForwardIt2>
@@ -3430,6 +3436,15 @@ __libcpp_uninitialized_relocate(_ForwardIt1 __first, _ForwardIt1 __last,
         _SingleMemcpy(), _RelocateInALoop());
 }
 
+template<class _ForwardIt1, class _ForwardIt2>
+inline _LIBCPP_INLINE_VISIBILITY
+_ForwardIt2
+uninitialized_relocate(_ForwardIt1 __first, _ForwardIt1 __last,
+                       _ForwardIt2 __result)
+{
+    return _VSTD::__libcpp_uninitialized_relocate(__first, __last, __result);
+}
+
 // __libcpp_uninitialized_relocate_n
 
 template<class _ForwardIt1, class _Size, class _ForwardIt2>
@@ -3493,6 +3508,14 @@ __libcpp_uninitialized_relocate_n(_ForwardIt1 __first, _Size __n, _ForwardIt2 __
     >;
     return _VSTD::__uninitialized_relocate_n_impl(__first, __n, __result,
         _SingleMemcpy(), _RelocateInALoop());
+}
+
+template<class _ForwardIt1, class _Size, class _ForwardIt2>
+inline _LIBCPP_INLINE_VISIBILITY
+pair<_ForwardIt1, _ForwardIt2>
+uninitialized_relocate_n(_ForwardIt1 __first, _Size __n, _ForwardIt2 __result)
+{
+    return _VSTD::__libcpp_uninitialized_relocate_n(__first, __n, __result);
 }
 
 #endif // _LIBCPP_STD_VER > 14
