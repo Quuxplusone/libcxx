@@ -109,7 +109,7 @@ bool
 operator< (const stack<_Tp, _Container>& __x, const stack<_Tp, _Container>& __y);
 
 template <class _Tp, class _Container /*= deque<_Tp>*/>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_TRIVIALLY_RELOCATABLE_IF((__libcpp_is_trivially_relocatable<_Container>::value)) stack
+class _LIBCPP_TEMPLATE_VIS stack
 {
 public:
     typedef _Container                               container_type;
@@ -124,27 +124,21 @@ protected:
 
 public:
     _LIBCPP_INLINE_VISIBILITY
-    stack()
-        _NOEXCEPT_(is_nothrow_default_constructible<container_type>::value)
-        : c() {}
+    stack() = default;
 
     _LIBCPP_INLINE_VISIBILITY
-    stack(const stack& __q) : c(__q.c) {}
+    stack(const stack& __q) = default;
 
     _LIBCPP_INLINE_VISIBILITY
-    stack& operator=(const stack& __q) {c = __q.c; return *this;}
+    stack& operator=(const stack& __q) = default;
 
 
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
-    stack(stack&& __q)
-        _NOEXCEPT_(is_nothrow_move_constructible<container_type>::value)
-        : c(_VSTD::move(__q.c)) {}
+    stack(stack&& __q) = default;
 
     _LIBCPP_INLINE_VISIBILITY
-    stack& operator=(stack&& __q)
-        _NOEXCEPT_(is_nothrow_move_assignable<container_type>::value)
-        {c = _VSTD::move(__q.c); return *this;}
+    stack& operator=(stack&& __q) = default;
 
     _LIBCPP_INLINE_VISIBILITY
     explicit stack(container_type&& __c) : c(_VSTD::move(__c)) {}
