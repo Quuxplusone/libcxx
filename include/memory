@@ -1510,8 +1510,6 @@ struct __is_default_allocator<_VSTD::allocator<_Tp> > : true_type {};
 template <class _Alloc>
 struct _LIBCPP_TEMPLATE_VIS allocator_traits
 {
-    typedef _Alloc __is_uncustomized;
-
     typedef _Alloc                              allocator_type;
     typedef typename allocator_type::value_type value_type;
 
@@ -1626,7 +1624,8 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
             typedef typename iterator_traits<_Ptr>::value_type _Tp;
             typedef typename remove_const<_Tp>::type _Vp;
             ptrdiff_t _Np = __end1 - __begin1;
-            if (_Np > 0) {
+            if (_Np > 0)
+            {
                 _VSTD::memcpy(const_cast<_Vp*>(_VSTD::__to_raw_pointer(__begin2)), _VSTD::__to_raw_pointer(__begin1), _Np * sizeof(_Tp));
                 __begin2 += _Np;
             }
@@ -1688,7 +1687,8 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
             typedef typename remove_const<_Tp>::type _Vp;
             ptrdiff_t _Np = __end1 - __begin1;
             __end2 -= _Np;
-            if (_Np > 0) {
+            if (_Np > 0)
+            {
                 _VSTD::memcpy(const_cast<_Vp*>(_VSTD::__to_raw_pointer(__end2)), _VSTD::__to_raw_pointer(__begin1), _Np * sizeof(_Tp));
             }
         }
@@ -5753,12 +5753,6 @@ struct __builtin_new_allocator {
 
 // __has_trivial_construct, __has_trivial_destroy
 
-template <class _Alloc, class = _Alloc>
-struct __has_customized_allocator_traits : true_type {};
-
-template <class _Alloc>
-struct __has_customized_allocator_traits<_Alloc, typename allocator_traits<_Alloc>::__is_uncustomized> : false_type {};
-
 template <class _Alloc>
 struct __is_exactly_std_allocator : false_type {};
 
@@ -5767,14 +5761,12 @@ struct __is_exactly_std_allocator<allocator<_Tp> > : true_type {};
 
 template <class _Alloc, class _Tp, class... _Args>
 struct __has_trivial_construct : integral_constant<bool,
-    (__is_exactly_std_allocator<_Alloc>::value || !__has_construct<_Alloc, _Tp*, _Args...>::value) &&
-    !__has_customized_allocator_traits<_Alloc>::value
+    (__is_exactly_std_allocator<_Alloc>::value || !__has_construct<_Alloc, _Tp*, _Args...>::value)
 > {};
 
 template <class _Alloc, class _Tp>
 struct __has_trivial_destroy : integral_constant<bool,
-    (__is_exactly_std_allocator<_Alloc>::value || !__has_destroy<_Alloc, _Tp*>::value) &&
-    !__has_customized_allocator_traits<_Alloc>::value
+    (__is_exactly_std_allocator<_Alloc>::value || !__has_destroy<_Alloc, _Tp*>::value)
 > {};
 
 _LIBCPP_END_NAMESPACE_STD
