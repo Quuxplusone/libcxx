@@ -845,6 +845,8 @@ private:
     void __swap_out_circular_buffer(__split_buffer<value_type, allocator_type&>& __v);
     pointer __swap_out_circular_buffer(__split_buffer<value_type, allocator_type&>& __v, pointer __p);
     void __move_range(pointer __from_s, pointer __from_e, pointer __to);
+    template<class _Up>
+        void __relocate_upward_and_insert(pointer __from_s, pointer __from_e, _Up&& __elt);
     void __move_assign(vector& __c, true_type)
         _NOEXCEPT_(is_nothrow_move_assignable<allocator_type>::value);
     void __move_assign(vector& __c, false_type)
@@ -1789,20 +1791,27 @@ vector<_Tp, _Allocator>::erase(const_iterator __first, const_iterator __last)
     return __r;
 }
 
+template<class _Tp, class _Allocator>
+template<class _Up>
+void
+vector<_Tp, _Allocator>::__relocate_upward_and_insert(pointer __from_s, pointer __from_e, _Up&& __elt)
+{
+    if (__vector_relocate_via_memcpy<_Tp, _Allocator>::value) {
+        _VSTD::memmove(_VSTD::__to_raw_pointer(__from_s + 1), _VSTD::__to_raw_pointer(__from_s), (__from_e - __from_s) * sizeof(_Tp));
+        ++this->__end_;
+        __alloc_traits::construct(this->__alloc(),
+                                  _VSTD::__to_raw_pointer(__from_s),
+                                  static_cast<_Up&&>(__elt));
+    } else {
+        __move_range(__from_s, __from_e, __from_s + 1);
+        *__from_s = static_cast<_Up&&>(__elt);
+    }
+}
+
 template <class _Tp, class _Allocator>
 void
 vector<_Tp, _Allocator>::__move_range(pointer __from_s, pointer __from_e, pointer __to)
 {
-#ifndef _LIBCPP_NO_TR_INSERT_OPTIMIZATION
-    if (__vector_relocate_via_memcpy<_Tp, _Allocator>::value && (__to == __from_s + 1) && (__from_e - __from_s >= 2)) {
-        _VSTD::memmove(_VSTD::__to_raw_pointer(__to + 1), _VSTD::__to_raw_pointer(__to), ((__from_e - __from_s) - 1) * sizeof(_Tp));
-        ++this->__end_;
-        __alloc_traits::construct(this->__alloc(),
-                                  _VSTD::__to_raw_pointer(__to),
-                                  _VSTD::move(*__from_s));
-        return;
-    }
-#endif
     pointer __old_last = this->__end_;
     difference_type __n = __old_last - __to;
     {
@@ -1835,11 +1844,10 @@ vector<_Tp, _Allocator>::insert(const_iterator __position, const_reference __x)
         }
         else
         {
-            __move_range(__p, this->__end_, __p + 1);
             const_pointer __xr = pointer_traits<const_pointer>::pointer_to(__x);
             if (__p <= __xr && __xr < this->__end_)
                 ++__xr;
-            *__p = *__xr;
+            __relocate_upward_and_insert(__p, this->__end_, *__xr);
         }
     }
     else
@@ -1872,8 +1880,7 @@ vector<_Tp, _Allocator>::insert(const_iterator __position, value_type&& __x)
         }
         else
         {
-            __move_range(__p, this->__end_, __p + 1);
-            *__p = _VSTD::move(__x);
+            __relocate_upward_and_insert(__p, this->__end_, _VSTD::move(__x));
         }
     }
     else
@@ -1906,8 +1913,7 @@ vector<_Tp, _Allocator>::emplace(const_iterator __position, _Args&&... __args)
         else
         {
             __temp_value<value_type, _Allocator> __tmp(this->__alloc(), _VSTD::forward<_Args>(__args)...);
-            __move_range(__p, this->__end_, __p + 1);
-            *__p = _VSTD::move(__tmp.get());
+            __relocate_upward_and_insert(__p, this->__end_, _VSTD::move(__tmp.get()));
         }
     }
     else
