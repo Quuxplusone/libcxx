@@ -14,14 +14,27 @@
 
 namespace {
 
-enum class ValueType { Uint32, String };
-struct AllValueTypes : EnumValuesAsTuple<AllValueTypes, ValueType, 2> {
-  static constexpr const char* Names[] = {"uint32", "string"};
+struct TriviallyRelocatableType {
+  std::string datamember;
+  explicit TriviallyRelocatableType(std::string m) : datamember(m) {}
+  bool operator<(const TriviallyRelocatableType& rhs) const {
+    return this->datamember < rhs.datamember;
+  }
+  bool operator>(const TriviallyRelocatableType& rhs) const {
+    return this->datamember > rhs.datamember;
+  }
+};
+
+enum class ValueType { Uint32, String, Trivre };
+struct AllValueTypes : EnumValuesAsTuple<AllValueTypes, ValueType, 3> {
+  static constexpr const char* Names[] = {"uint32", "string", "trivre"};
 };
 
 template <class V>
 using Value =
-    std::conditional_t<V() == ValueType::Uint32, uint32_t, std::string>;
+    std::conditional_t<V() == ValueType::Uint32, uint32_t,
+    std::conditional_t<V() == ValueType::String, std::string,
+    TriviallyRelocatableType> >;
 
 enum class Order {
   Random,
@@ -53,6 +66,15 @@ void fillValues(std::vector<std::string>& V, size_t N, Order O) {
   } else {
     while (V.size() < N)
       V.push_back(getRandomString(1024));
+  }
+}
+
+void fillValues(std::vector<TriviallyRelocatableType>& V, size_t N, Order O) {
+  if (O == Order::SingleElement) {
+    V.resize(N, TriviallyRelocatableType(getRandomString(1024)));
+  } else {
+    while (V.size() < N)
+      V.emplace_back(getRandomString(1024));
   }
 }
 
