@@ -1,14 +1,11 @@
 //===----------------------------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//                     The LLVM Compiler Infrastructure
+//
+// This file is dual licensed under the MIT and the University of Illinois Open
+// Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-
-#ifdef AJO_FANCY
-#include "test_fancy_allocator.h"
-#else
 
 #ifndef TEST_ALLOCATOR_H
 #define TEST_ALLOCATOR_H
@@ -23,6 +20,8 @@
 #include <cassert>
 
 #include "test_macros.h"
+
+#include "test_fancy_pointer.h"
 
 template <class Alloc>
 inline typename std::allocator_traits<Alloc>::size_type
@@ -39,37 +38,12 @@ public:
     static int throw_after;
     static int count;
     static int alloc_count;
-    static int copied;
-    static int moved;
-    static int converted;
-
-    const static int destructed_value = -1;
-    const static int default_value = 0;
-    const static int moved_value = INT_MAX;
-
-    static void clear() {
-      assert(count == 0 && "clearing leaking allocator data?");
-      count = 0;
-      time_to_throw = 0;
-      alloc_count = 0;
-      throw_after = INT_MAX;
-      clear_ctor_counters();
-    }
-
-    static void clear_ctor_counters() {
-      copied = 0;
-      moved = 0;
-      converted = 0;
-    }
 };
 
 int test_alloc_base::count = 0;
 int test_alloc_base::time_to_throw = 0;
 int test_alloc_base::alloc_count = 0;
 int test_alloc_base::throw_after = INT_MAX;
-int test_alloc_base::copied = 0;
-int test_alloc_base::moved = 0;
-int test_alloc_base::converted = 0;
 
 template <class T>
 class test_allocator
@@ -83,8 +57,8 @@ public:
     typedef unsigned                                                   size_type;
     typedef int                                                        difference_type;
     typedef T                                                          value_type;
-    typedef value_type*                                                pointer;
-    typedef const value_type*                                          const_pointer;
+    typedef test_fancyptr<value_type>                                  pointer;
+    typedef test_fancyptr<const value_type>                            const_pointer;
     typedef typename std::add_lvalue_reference<value_type>::type       reference;
     typedef typename std::add_lvalue_reference<const value_type>::type const_reference;
 
@@ -93,38 +67,14 @@ public:
     test_allocator() TEST_NOEXCEPT : data_(0), id_(0) {++count;}
     explicit test_allocator(int i, int id = 0) TEST_NOEXCEPT : data_(i), id_(id)
       {++count;}
-    test_allocator(const test_allocator& a) TEST_NOEXCEPT : data_(a.data_),
-                                                            id_(a.id_) {
-      ++count;
-      ++copied;
-      assert(a.data_ != destructed_value && a.id_ != destructed_value &&
-             "copying from destroyed allocator");
-    }
-#if TEST_STD_VER >= 11
-    test_allocator(test_allocator&& a) TEST_NOEXCEPT : data_(a.data_),
-                                                       id_(a.id_) {
-      ++count;
-      ++moved;
-      assert(a.data_ != destructed_value && a.id_ != destructed_value &&
-             "moving from destroyed allocator");
-      a.data_ = moved_value;
-      a.id_ = moved_value;
-    }
-#endif
-    template <class U>
-    test_allocator(const test_allocator<U>& a) TEST_NOEXCEPT : data_(a.data_),
-                                                               id_(a.id_) {
-      ++count;
-      ++converted;
-    }
+    test_allocator(const test_allocator& a) TEST_NOEXCEPT
+        : data_(a.data_), id_(a.id_) {++count;}
+    template <class U> test_allocator(const test_allocator<U>& a) TEST_NOEXCEPT
+        : data_(a.data_), id_(a.id_) {++count;}
     ~test_allocator() TEST_NOEXCEPT {
       assert(data_ >= 0); assert(id_ >= 0);
-      --count;
-      data_ = destructed_value;
-      id_ = destructed_value;
+      --count; data_ = -1; id_ = -1;
     }
-    pointer address(reference x) const {return &x;}
-    const_pointer address(const_reference x) const {return &x;}
     pointer allocate(size_type n, const void* = 0)
         {
             assert(data_ >= 0);
@@ -137,18 +87,23 @@ public:
             }
             ++time_to_throw;
             ++alloc_count;
-            return (pointer)::operator new(n * sizeof(T));
+            return pointer((value_type*)::operator new(n * sizeof(T)), n);
         }
-    void deallocate(pointer p, size_type)
-        {assert(data_ >= 0); --alloc_count; ::operator delete((void*)p);}
+    void deallocate(pointer p, size_type n)
+        {
+            assert(data_ >= 0);
+            assert(p.payload() == n);
+            --alloc_count;
+            ::operator delete((void*)p.ptr());
+        }
     size_type max_size() const TEST_NOEXCEPT
         {return UINT_MAX / sizeof(T);}
 #if TEST_STD_VER < 11
     void construct(pointer p, const T& val)
-        {::new(static_cast<void*>(p)) T(val);}
+        {::new(static_cast<void*>(p.ptr())) T(val);}
 #else
     template <class U> void construct(pointer p, U&& val)
-        {::new(static_cast<void*>(p)) T(std::forward<U>(val));}
+        {::new(static_cast<void*>(p.ptr())) T(std::forward<U>(val));}
 #endif
     void destroy(pointer p)
         {p->~T();}
@@ -235,8 +190,8 @@ public:
     typedef unsigned                                                   size_type;
     typedef int                                                        difference_type;
     typedef void                                                       value_type;
-    typedef value_type*                                                pointer;
-    typedef const value_type*                                          const_pointer;
+    typedef test_fancyptr<value_type>                                  pointer;
+    typedef test_fancyptr<const value_type>                            const_pointer;
 
     template <class U> struct rebind {typedef test_allocator<U> other;};
 
@@ -446,7 +401,5 @@ inline bool operator!=(limited_allocator<T, N> const& LHS,
   return !(LHS == RHS);
 }
 
-
-#endif  // AJO_FANCY
 
 #endif  // TEST_ALLOCATOR_H
